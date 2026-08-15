@@ -17,6 +17,7 @@ from . import normalize as N
 from .categories import (
     DOMAIN_RULES, DOMAIN_SLUGS, DOMAIN_UNCLASSIFIED,
     NATURE_RULES, NATURE_SLUGS, NATURE_DEFAULT, classify,
+    domain_unmatched_reason,
 )
 from .companies import (
     SEED_COMPANIES, US_GOV_RE, guess_entity_type_without_cn,
@@ -332,8 +333,10 @@ def normalize_contracts(conn, source_id: int, method_group: str) -> dict:
 
         title = (raw["raw_title"] or "").strip()
         dom_name, dom_matched, nat_name, nat_matched = classify(title)
+        unmatched_reason = None
         if not dom_matched:
             stats["uncategorized"] += 1
+            unmatched_reason = domain_unmatched_reason(title, nat_name)
 
         if method_group == "zuikei":
             method = "随意契約"
@@ -358,9 +361,10 @@ def normalize_contracts(conn, source_id: int, method_group: str) -> dict:
             """INSERT INTO contracts(raw_contract_id, source_id, fiscal_year, contract_date, company_id,
                    title, amount, planned_price, award_rate, procurement_method, agency,
                    agency_department, agency_location, domain_category_id, nature_category_id,
-                   domain_rule_matched, nature_rule_matched, suspected_duplicate,
-                   normalization_status, normalization_flags, normalization_version)
-               VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
+                   domain_rule_matched, domain_unmatched_reason, nature_rule_matched,
+                   suspected_duplicate, normalization_status, normalization_flags,
+                   normalization_version)
+               VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
                ON CONFLICT(raw_contract_id) DO UPDATE SET
                    fiscal_year=excluded.fiscal_year, contract_date=excluded.contract_date,
                    company_id=excluded.company_id, title=excluded.title, amount=excluded.amount,
@@ -370,6 +374,7 @@ def normalize_contracts(conn, source_id: int, method_group: str) -> dict:
                    domain_category_id=excluded.domain_category_id,
                    nature_category_id=excluded.nature_category_id,
                    domain_rule_matched=excluded.domain_rule_matched,
+                   domain_unmatched_reason=excluded.domain_unmatched_reason,
                    nature_rule_matched=excluded.nature_rule_matched,
                    suspected_duplicate=excluded.suspected_duplicate,
                    normalization_status=excluded.normalization_status,
@@ -381,7 +386,8 @@ def normalize_contracts(conn, source_id: int, method_group: str) -> dict:
                 rate, method, agency["organization"] or ORGANIZATION,
                 agency["department"], agency["location"],
                 dom_ids[dom_name], nat_ids[nat_name],
-                int(dom_matched), int(nat_matched), raw["suspected_duplicate"],
+                int(dom_matched), unmatched_reason, int(nat_matched),
+                raw["suspected_duplicate"],
                 status, ";".join(flags) if flags else None, N.NORMALIZATION_VERSION,
             ),
         )

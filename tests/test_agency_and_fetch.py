@@ -51,6 +51,29 @@ class TestEntityType:
         assert t == "foreign_company"
 
 
+class TestXlsxValidation:
+    def test_truncated_zip_rejected(self):
+        # 先頭がPKでも途中で切れたZIPは拒否する(キャッシュを壊さない)
+        import io, zipfile
+        from etl.fetch import validate_xlsx_bytes
+        buf = io.BytesIO()
+        with zipfile.ZipFile(buf, "w") as zf:
+            zf.writestr("[Content_Types].xml", "<x/>")
+            zf.writestr("xl/workbook.xml", "<w/>" * 1000)
+        data = buf.getvalue()
+        assert validate_xlsx_bytes(data) is True
+        assert validate_xlsx_bytes(data[: len(data) // 2]) is False  # 途中切れ
+        assert validate_xlsx_bytes(b"PK\x03\x04garbage") is False
+
+    def test_non_xlsx_zip_rejected(self):
+        import io, zipfile
+        from etl.fetch import validate_xlsx_bytes
+        buf = io.BytesIO()
+        with zipfile.ZipFile(buf, "w") as zf:
+            zf.writestr("readme.txt", "not xlsx")
+        assert validate_xlsx_bytes(buf.getvalue()) is False
+
+
 class TestMissingMarkerTTL:
     def test_expired_marker_is_retried(self, tmp_path):
         sf = SourceFile(2026, "zuikei", 7)  # 進行中年度

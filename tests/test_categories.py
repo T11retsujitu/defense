@@ -101,6 +101,46 @@ def test_clothing():
     assert d == "共通・その他"
 
 
+def test_upgrade_nature():
+    d, _, n, _ = classify("Ｆ－１５能力向上量産改修")
+    assert d == "航空機"
+    assert n == "改修・能力向上"
+
+
+def test_upgrade_vs_rd_priority():
+    # 「能力向上に関する研究」は研究開発が優先
+    _, _, n, _ = classify("アッパーステージ能力向上に関する研究")
+    assert n == "研究開発"
+
+
+def test_study_nature():
+    _, _, n, nm = classify("新規ビーム結合方式の検討")
+    assert n == "調査・検討" and nm
+
+
+def test_rule_gap_fixes():
+    # レビューで指摘されたrule gap
+    assert classify("中ＳＡＭ（改）能力向上の性能確認試験用器材")[0] == "誘導弾・ミサイル"
+    assert classify("ＵＰ－３Ｄの能力向上")[0] == "航空機"
+    assert classify("２３式ドーザ")[0] == "陸上装備"
+    assert classify("情報収集用ＲＯＶ　ＯＸＸ－４")[0] == "無人機"
+    assert classify("赤外線探知装置ＡＮ／ＡＡＳ－４４－Ｎ３")[0] == "C4ISR・電子機器"
+    assert classify("スレットハンティング器材の借上（０７増設）")[0] == "IT・ソフトウェア"
+    assert classify("ＥＳＭ装置の小型化の研究")[0] == "C4ISR・電子機器"
+    assert classify("ＬＭ２５００ＩＥＣ型ガスタービン機関")[0] == "艦船"
+
+
+def test_unmatched_reason_codes():
+    from etl.categories import (
+        UNMATCHED_CROSS_DOMAIN, UNMATCHED_INSUFFICIENT, UNMATCHED_REVIEW,
+        domain_unmatched_reason,
+    )
+    assert domain_unmatched_reason("ＦＭＳ（装備認定試験）ＱＰＨ", "研究開発") == UNMATCHED_INSUFFICIENT
+    assert domain_unmatched_reason("製造工程効率化に係る特定取組", "産業基盤") == UNMATCHED_INSUFFICIENT
+    assert domain_unmatched_reason("極超音速燃焼風洞試験装置（その２）", NATURE_DEFAULT) == UNMATCHED_CROSS_DOMAIN
+    assert domain_unmatched_reason("マットレス（市販品）", NATURE_DEFAULT) == UNMATCHED_REVIEW
+
+
 def test_unclassified():
     d, dm, n, nm = classify("マットレス（市販品）")
     assert d == DOMAIN_UNCLASSIFIED and not dm

@@ -7,7 +7,8 @@
 {% if cat.slug == 'uncategorized' %}
 <div class="callout">ルールで分類できなかった契約です。誤分類を避けるため推測で割り当てず、未分類のまま公開しています。</div>
 {% elif cat.slug == 'acquisition' %}
-<div class="callout">「新規取得」には、他の契約目的ルールに一致しない物品調達(既定値)を含みます。</div>
+<div class="callout">「物品取得・その他」は契約目的ルールに一致しない契約の<strong>既定値(仮定)</strong>であり、
+分類結果ではありません。通常の物品取得契約が大半ですが、目的が特定できていない契約を含みます。</div>
 {% endif %}
 
 <section class="stat-row">

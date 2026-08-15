@@ -27,9 +27,9 @@
       {% if c.agency_department %}<span class="muted small">/ {{ c.agency_department }}</span>{% endif %}
       {% if c.agency_location %}<span class="muted small">({{ c.agency_location }})</span>{% endif %}</td></tr>
   <tr><th>装備分野</th><td>{% if c.domain_slug %}<a href="/categories/{{ c.domain_slug }}/">{{ c.domain_name }}</a>{% endif %}
-      <span class="muted small">({% if c.domain_rule_matched %}ルール一致{% else %}未分類{% endif %})</span></td></tr>
+      <span class="muted small">({% if c.domain_rule_matched %}ルール一致{% else %}未分類{% if c.domain_unmatched_reason %}: {{ c.domain_unmatched_reason }}{% endif %}{% endif %})</span></td></tr>
   <tr><th>契約目的</th><td>{% if c.nature_slug %}<a href="/categories/{{ c.nature_slug }}/">{{ c.nature_name }}</a>{% endif %}
-      <span class="muted small">({% if c.nature_rule_matched %}ルール一致{% else %}既定値(物品調達){% endif %})</span></td></tr>
+      <span class="muted small">({% if c.nature_rule_matched %}ルール一致{% else %}既定値適用(分類結果ではない){% endif %})</span></td></tr>
   <tr><th>正規化状態</th><td>{{ c.normalization_status }}{% if c.normalization_flags %} <span class="warn small">{{ c.normalization_flags }}</span>{% endif %}
       <span class="muted small">(v{{ c.normalization_version }})</span></td></tr>
 </table>

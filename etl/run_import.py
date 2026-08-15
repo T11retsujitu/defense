@@ -66,10 +66,11 @@ def main(argv=None):
 
         try:
             rows = parse_xlsx(path)
-        except ParseError as e:
+        except Exception as e:  # ParseError / BadZipFile / openpyxl例外
+            # 1ファイルの破損で取込全体を止めない(ファイル単位で失敗記録)
             job["files_failed"] += 1
-            lines.append(f"PARSE_ERROR {path.name}: {e}")
-            log.error("parse error: %s", e)
+            lines.append(f"PARSE_ERROR {path.name}: {type(e).__name__}: {e}")
+            log.error("parse error in %s: %s: %s", path.name, type(e).__name__, e)
             continue
 
         source_id = upsert_source(conn, sf, sha256_of(path), len(rows))

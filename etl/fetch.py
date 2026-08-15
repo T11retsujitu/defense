@@ -10,11 +10,14 @@ from __future__ import annotations
 
 import datetime
 import hashlib
+import io
 import json
 import logging
+import os
 import time
 import urllib.error
 import urllib.request
+import zipfile
 from pathlib import Path
 
 from .sources import SourceFile
@@ -86,8 +89,31 @@ def _missing_marker_expired(marker: Path, sf: SourceFile) -> bool:
     return _now() - checked > ttl
 
 
+def validate_xlsx_bytes(data: bytes) -> bool:
+    """xlsxとしての最低限の整合性検査。
+
+    先頭PKだけでは途中で切れたZIPを検出できないため、ZIP全体の
+    CRC検査(testzip)とxlsx必須エントリの存在を確認する。
+    """
+    if data[:2] != b"PK":
+        return False
+    try:
+        with zipfile.ZipFile(io.BytesIO(data)) as zf:
+            if zf.testzip() is not None:
+                return False
+            names = zf.namelist()
+            return "[Content_Types].xml" in names and any(
+                n.startswith("xl/") for n in names)
+    except (zipfile.BadZipFile, OSError):
+        return False
+
+
 def _download(sf: SourceFile, dest: Path, prev_meta: dict | None = None):
-    """条件付きGET。返り値: ('fetched'|'unchanged'|'missing'|'error', headers|None)"""
+    """条件付きGET。返り値: ('fetched'|'unchanged'|'missing'|'error', headers|None)
+
+    検証済みデータを一時ファイル経由でos.replace()により原子的に配置する。
+    検証に失敗した場合は既存キャッシュを壊さない。
+    """
     _throttle()
     headers = {"User-Agent": USER_AGENT}
     if prev_meta:
@@ -100,11 +126,13 @@ def _download(sf: SourceFile, dest: Path, prev_meta: dict | None = None):
         with urllib.request.urlopen(req, timeout=60) as resp:
             data = resp.read()
             resp_headers = dict(resp.headers)
-        if data[:2] != b"PK":  # xlsx = zip
-            log.warning("not xlsx content: %s", sf.url)
+        if not validate_xlsx_bytes(data):
+            log.warning("invalid/truncated xlsx content: %s", sf.url)
             return "error", None
         dest.parent.mkdir(parents=True, exist_ok=True)
-        dest.write_bytes(data)
+        tmp = dest.with_suffix(dest.suffix + ".part")
+        tmp.write_bytes(data)
+        os.replace(tmp, dest)  # 原子的置換(検証済みのみが本パスに現れる)
         return "fetched", resp_headers
     except urllib.error.HTTPError as e:
         if e.code == 304:

@@ -98,7 +98,8 @@ CREATE TABLE IF NOT EXISTS contracts (
     domain_category_id INTEGER REFERENCES categories(id),   -- 装備分野
     nature_category_id INTEGER REFERENCES categories(id),   -- 契約目的
     domain_rule_matched INTEGER NOT NULL DEFAULT 0,  -- 1=ルール一致 / 0=未分類
-    nature_rule_matched INTEGER NOT NULL DEFAULT 0,  -- 1=ルール一致 / 0=既定値(新規取得)適用
+    domain_unmatched_reason TEXT,          -- 未分類の理由(insufficient_context/cross_domain/manual_review_pending)
+    nature_rule_matched INTEGER NOT NULL DEFAULT 0,  -- 1=ルール一致 / 0=既定値(物品取得・その他)適用
     suspected_duplicate INTEGER NOT NULL DEFAULT 0,  -- raw層の完全一致重複フラグを引き継ぐ
     normalization_status TEXT NOT NULL,    -- ok / partial
     normalization_flags TEXT,              -- amount_failed;date_failed;company_unresolved;company_ambiguous 等

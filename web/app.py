@@ -468,12 +468,17 @@ def methodology():
            FROM contracts""").fetchone()
     dup_amount = conn.execute(
         "SELECT COALESCE(SUM(amount),0) a FROM contracts WHERE suspected_duplicate=1").fetchone()["a"]
+    unmatched_reasons = conn.execute(
+        """SELECT domain_unmatched_reason reason, COUNT(*) n, COALESCE(SUM(amount),0) total
+           FROM contracts WHERE domain_rule_matched=0
+           GROUP BY domain_unmatched_reason ORDER BY n DESC""").fetchall()
     entity_split = conn.execute(
         """SELECT co.entity_type, COUNT(*) n, SUM(c.amount) total
            FROM contracts c JOIN companies co ON co.id=c.company_id
            WHERE c.amount IS NOT NULL GROUP BY co.entity_type ORDER BY total DESC""").fetchall()
     return render_template("methodology.html", quality=quality,
-                           dup_amount=dup_amount, entity_split=entity_split)
+                           dup_amount=dup_amount, entity_split=entity_split,
+                           unmatched_reasons=unmatched_reasons)
 
 
 @app.route("/contracts/<int:cid>/")

@@ -8,8 +8,10 @@
 
 ## 現状 (PoC完了時点)
 
-- 実データ収録: 令和5〜8年度の公表ファイル14件 / 契約2,820件 / 企業・団体549
-- parse失敗 0件、法人番号による企業同定率 約95%、金額ベースのカテゴリ分類カバレッジ 約97%
+- 実データ収録: 令和5〜8年度の公表ファイル**78件(公表済み全月)** / 契約**21,208件(約16.3兆円)** / 企業・団体1,203
+- parse失敗 0件(注記行2件はrawのみ保持)、企業未解決 9件(小規模事業者のみ)、
+  カテゴリ未分類 件数28% / **金額ベース3.6%**
+- 未公表月(令和8年度7月以降)は404マーカーで管理し、次回実行時に自動追随
 - 一次データ調査の詳細: [docs/data-survey.md](docs/data-survey.md)
 
 ## 技術構成
@@ -84,8 +86,18 @@ make test  # = python3 -m pytest tests/
 
 ## デプロイ
 
-PoCのため未設定。想定: SQLite+Flaskを小型VPS/PaaSで動かすか、
-ページを静的書き出ししてCDN配信(いずれもロックインなし)。
+小型VPS + Docker(gunicorn) + Caddy を採用。詳細と運用手順は
+[docs/deployment.md](docs/deployment.md) 参照。ローカル検証:
+
+```bash
+docker compose up --build   # http://localhost:8000
+```
+
+## 関連ドキュメント
+
+- [docs/data-survey.md](docs/data-survey.md) — 一次データ調査(中央調達xlsx)
+- [docs/honbu-pdf-survey.md](docs/honbu-pdf-survey.md) — 本部一般調達PDFの調査と対応方針(次期スコープ)
+- [docs/deployment.md](docs/deployment.md) — デプロイ構成
 
 ## ディレクトリ
 

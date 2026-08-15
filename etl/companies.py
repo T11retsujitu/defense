@@ -55,7 +55,17 @@ FOREIGN_ENTITIES: dict[str, tuple[str, str, str]] = {
     "米陸軍省": ("米陸軍省(FMS)", "us-army-fms", "foreign_government"),
     "米国防省": ("米国防省(FMS)", "us-dod-fms", "foreign_government"),
     "米国防兵站局": ("米国防兵站局(FMS)", "us-dla-fms", "foreign_government"),
+    "米国家安全保障庁": ("米国家安全保障庁(FMS)", "us-nsa-fms", "foreign_government"),
+    "米情報システム庁": ("米情報システム庁(FMS)", "us-disa-fms", "foreign_government"),
+    "米ミサイル防衛庁": ("米ミサイル防衛庁(FMS)", "us-mda-fms", "foreign_government"),
+    "米国防脅威削減局": ("米国防脅威削減局(FMS)", "us-dtra-fms", "foreign_government"),
+    "米沿岸警備隊": ("米沿岸警備隊(FMS)", "us-coast-guard-fms", "foreign_government"),
 }
+
+# 「米〜省/庁/局/隊」で始まる名称は米国政府機関(FMS相手方)とみなすフォールバック
+import re as _re
+
+US_GOV_RE = _re.compile(r"^米.{1,12}(省|庁|局|隊)$")
 
 SEED_ENTITY_TYPES = {"独立行政法人": "gov_agency", "国立研究開発法人": "gov_agency"}
 

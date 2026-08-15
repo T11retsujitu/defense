@@ -148,6 +148,8 @@ def normalize_company_name(name: str) -> str:
     for pat, repl in _LEGAL_ABBREV:
         text = pat.sub(repl, text)
     text = re.sub(r"\s+", "", text)
+    # 公表ファイルの注記マーカー(※)は名称の一部ではない (例: 「米陸軍省※」)
+    text = text.replace("※", "")
     return text
 
 

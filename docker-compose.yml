@@ -1,0 +1,19 @@
+services:
+  web:
+    build: .
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./data:/app/data
+    restart: unless-stopped
+
+  # 本番でTLS終端する場合(ドメイン設定後に有効化)
+  # caddy:
+  #   image: caddy:2
+  #   ports: ["80:80", "443:443"]
+  #   volumes:
+  #     - ./Caddyfile:/etc/caddy/Caddyfile
+  #     - caddy_data:/data
+  #   restart: unless-stopped
+# volumes:
+#   caddy_data:

@@ -167,6 +167,26 @@ def _resolve_company(conn, raw_company: str | None, raw_cn) -> tuple[int | None,
         )
         return row["id"], True
 
+    # 「米〜省/庁/局/隊」は米国政府機関(FMS相手方)として同定
+    from .companies import US_GOV_RE
+    if US_GOV_RE.match(norm):
+        row = conn.execute(
+            "SELECT id FROM companies WHERE normalized_name=? AND entity_type='foreign_government'",
+            (norm,),
+        ).fetchone()
+        if not row:
+            slug = "usgov-" + format(abs(hash(norm)) % 10**8, "08d")
+            conn.execute(
+                "INSERT INTO companies(corporate_number, name, normalized_name, slug, entity_type) VALUES (NULL,?,?,?,?)",
+                (norm + "(FMS)", norm, slug, "foreign_government"),
+            )
+            row = conn.execute("SELECT id FROM companies WHERE normalized_name=? AND entity_type='foreign_government'", (norm,)).fetchone()
+        conn.execute(
+            "INSERT OR IGNORE INTO company_aliases(alias, company_id, source, confidence) VALUES (?,?,?,?)",
+            (norm, row["id"], "rule_us_gov", 0.9),
+        )
+        return row["id"], True
+
     row = conn.execute(
         """SELECT company_id AS id, confidence FROM company_aliases WHERE alias=?
            ORDER BY confidence DESC LIMIT 1""",
@@ -192,10 +212,16 @@ def _resolve_company(conn, raw_company: str | None, raw_cn) -> tuple[int | None,
 
 def normalize_contracts(conn, source_id: int, method_group: str) -> dict:
     """指定sourceのraw_contractsをcontractsへ正規化投入(全再生成)。統計を返す。"""
-    stats = {"rows": 0, "parse_failures": 0, "company_unresolved": 0, "uncategorized": 0}
+    stats = {"rows": 0, "parse_failures": 0, "company_unresolved": 0,
+             "uncategorized": 0, "annotation_rows": 0}
     cat_ids = {r["name"]: r["id"] for r in conn.execute("SELECT id, name FROM categories")}
     raws = conn.execute("SELECT * FROM raw_contracts WHERE source_id=?", (source_id,)).fetchall()
     for raw in raws:
+        # 注記行(「※誤記修正」等): 契約実体がない行はcontractsに投入しない(rawには残る)
+        if (raw["raw_title"] or "").startswith("※") and not raw["raw_company"] \
+                and not raw["raw_amount"] and not raw["raw_contract_date"]:
+            stats["annotation_rows"] += 1
+            continue
         stats["rows"] += 1
         flags = []
         d = N.parse_date(raw["raw_contract_date"])

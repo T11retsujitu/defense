@@ -41,6 +41,29 @@ def test_unmanned():
     assert classify("遊弋型ＵＡＶ対処器材")[0] == "無人機"
 
 
+def test_industrial_base():
+    # 令和7年度から頻出する防衛生産基盤強化関連の契約
+    assert classify("製造工程効率化に係る特定取組（Ｂ－２０２５－０１２２－００）")[0] == "産業基盤・特定取組"
+
+
+def test_general_equipment():
+    assert classify("発動発電機セット")[0] == "汎用機材"
+    assert classify("無停電電源装置")[0] == "汎用機材"
+
+
+def test_ship_gas_turbine():
+    assert classify("主機械ＭＴ３０型ガスタービン機関（減速装置を含む）")[0] == "艦船"
+
+
+def test_fuel_not_hijacked_by_vehicle_keyword():
+    # 「ドーザ等用」の作動油が車両に誤分類されないこと(ドーザは意図的に除外)
+    assert classify("作動油，中型ドーザ等用，１０Ｗ")[0] == "燃料・油脂"
+
+
+def test_clothing_suffix():
+    assert classify("冬服，陸，男性，曹士，１６式")[0] == "需品・被服"
+
+
 def test_unclassified_returns_zero_confidence():
     name, conf = classify("マットレス（市販品）")
     assert name == UNCLASSIFIED

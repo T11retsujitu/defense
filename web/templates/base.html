@@ -21,6 +21,9 @@
   </div>
 </header>
 <main class="wrap">
+{% if static_build %}
+<div class="static-banner">静的プレビュー版です。キーワード検索・金額フィルタ等の動的機能は動作しません(年度・企業・カテゴリの閲覧は可能)。</div>
+{% endif %}
 {% block content %}{% endblock %}
 </main>
 <footer class="site-footer">

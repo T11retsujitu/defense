@@ -3,6 +3,12 @@
 {% block content %}
 <h1>契約検索</h1>
 
+{% if static_build %}
+<p class="filters-static">年度:
+  <a href="/contracts/">全年度</a>
+  {% for y in years %} | <a href="/contracts/?year={{ y }}">{{ y | wareki }}</a>{% endfor %}
+</p>
+{% else %}
 <form class="filters" method="get" action="/contracts/">
   <input type="search" name="q" value="{{ f.q }}" placeholder="件名キーワード">
   <select name="year">
@@ -26,6 +32,7 @@
   {% if f.company %}<input type="hidden" name="company" value="{{ f.company }}">{% endif %}
   <button type="submit">検索</button>
 </form>
+{% endif %}
 
 <p class="result-count">{{ "{:,}".format(total) }}件</p>
 

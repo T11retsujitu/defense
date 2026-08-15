@@ -91,7 +91,7 @@
     {% endfor %}
     </tbody>
   </table>
-  <p class="more"><a href="/contracts/?company={{ co.slug }}">この相手方の全契約 →</a></p>
+  {% if not static_build %}<p class="more"><a href="/contracts/?company={{ co.slug }}">この相手方の全契約 →</a></p>{% endif %}
 </section>
 </div>
 

@@ -78,7 +78,7 @@
     {% endfor %}
     </tbody>
   </table>
-  <p class="more"><a href="/contracts/?{{ filter_param }}={{ cat.slug }}">このカテゴリの全契約 →</a></p>
+  {% if not static_build %}<p class="more"><a href="/contracts/?{{ filter_param }}={{ cat.slug }}">このカテゴリの全契約 →</a></p>{% endif %}
 </section>
 </div>
 {% endblock %}

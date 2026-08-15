@@ -1,27 +1,27 @@
 {% extends "base.html" %}
 {% block title %}{{ co.name }}{% endblock %}
 {% block content %}
-<nav class="breadcrumb"><a href="/companies/">企業</a> › {{ co.name }}</nav>
-<h1>{{ co.name }}</h1>
+<nav class="breadcrumb"><a href="/companies/">契約相手方</a> › {{ co.name }}</nav>
+<h1>{{ co.name }}
+  {% if co.entity_type != 'company' %}<span class="tag">{{ entity_label(co.entity_type) }}</span>{% endif %}</h1>
 <p class="meta">
-  {% if co.corporate_number %}法人番号: {{ co.corporate_number }} ・ {% endif %}
-  {% if co.entity_type == 'foreign_government' %}区分: 外国政府等(FMS=対外有償軍事援助){% elif co.entity_type == 'gov_agency' %}区分: 公的機関{% endif %}
+  {% if co.corporate_number %}法人番号: {{ co.corporate_number }}{% endif %}
 </p>
 
 <div class="callout">
   ここに表示する金額は防衛装備庁 中央調達の公表契約の合計であり、
-  <strong>当該企業の防衛関連売上高ではありません</strong>。
+  <strong>当該{{ '組織' if co.entity_type in ('foreign_government', 'gov_agency') else '企業' }}の防衛関連売上高ではありません</strong>。
   地方調達・非公表契約・変更契約は含まれません。複数年度契約は契約締結年度に全額計上されます。
 </div>
 
 <section class="stat-row">
-  <div class="stat"><div class="stat-label">{{ fy | wareki }} 契約総額</div>
-    <div class="stat-value">{{ (cur.total if cur else none) | oku }}</div></div>
-  <div class="stat"><div class="stat-label">{{ fy | wareki }} 契約件数</div>
-    <div class="stat-value">{{ cur.n if cur else '—' }}</div></div>
-  <div class="stat"><div class="stat-label">前年度比 <span class="small">(収録範囲内)</span></div>
+  <div class="stat"><div class="stat-label">{{ fy | wareki }}{% if plabel %} {{ plabel }}累計{% endif %} 契約総額</div>
+    <div class="stat-value">{{ (cur.t if cur else none) | oku }}</div></div>
+  <div class="stat"><div class="stat-label">{{ fy | wareki }}{% if plabel %} {{ plabel }}{% endif %} 契約件数</div>
+    <div class="stat-value">{{ cur.n if cur and cur.n else '—' }}</div></div>
+  <div class="stat"><div class="stat-label">{% if plabel %}前年同期比 ({{ plabel }}){% else %}前年度比{% endif %}</div>
     <div class="stat-value">{% if yoy is not none %}{{ '%+.1f' | format(yoy) }}%{% else %}—{% endif %}</div></div>
-  <div class="stat"><div class="stat-label">{{ fy | wareki }} 契約額順位</div>
+  <div class="stat"><div class="stat-label">{{ fy | wareki }} 企業内順位</div>
     <div class="stat-value">{% if rank %}{{ rank }}位{% else %}—{% endif %}</div></div>
 </section>
 
@@ -33,7 +33,8 @@
     <tbody>
     {% for r in yearly %}
       <tr>
-        <td>{{ r.fiscal_year | wareki }}</td>
+        <td>{{ r.fiscal_year | wareki }}
+          {% if yearly_labels[r.fiscal_year] %}<span class="tag">{{ yearly_labels[r.fiscal_year] }}</span>{% endif %}</td>
         <td class="num">{{ r.total | oku }}</td>
         <td class="bar-col"><div class="bar" style="width: {{ (r.total / max_total * 100) | round(1) }}%"></div></td>
         <td class="num">{{ r.n }}</td>
@@ -41,13 +42,24 @@
     {% endfor %}
     </tbody>
   </table>
-  <p class="note">※ 収録済みファイル分のみ。<a href="/sources/">収録状況</a>を参照。</p>
+  <p class="note">※ 収録済みファイル分のみ。進行中年度は収録期間を表示。<a href="/sources/">収録状況</a>を参照。</p>
 
-  <h2>カテゴリ構成</h2>
+  <h2>装備分野構成 <span class="sub">全収録期間</span></h2>
   <table class="data">
-    <thead><tr><th>カテゴリ</th><th class="num">契約総額</th><th class="num">件数</th></tr></thead>
+    <thead><tr><th>装備分野</th><th class="num">契約総額</th><th class="num">件数</th></tr></thead>
     <tbody>
-    {% for r in cats %}
+    {% for r in domains %}
+      <tr><td><a href="/categories/{{ r.slug }}/">{{ r.name }}</a></td>
+          <td class="num">{{ r.total | oku }}</td><td class="num">{{ r.n }}</td></tr>
+    {% endfor %}
+    </tbody>
+  </table>
+
+  <h2>契約目的構成 <span class="sub">全収録期間</span></h2>
+  <table class="data">
+    <thead><tr><th>契約目的</th><th class="num">契約総額</th><th class="num">件数</th></tr></thead>
+    <tbody>
+    {% for r in natures %}
       <tr><td><a href="/categories/{{ r.slug }}/">{{ r.name }}</a></td>
           <td class="num">{{ r.total | oku }}</td><td class="num">{{ r.n }}</td></tr>
     {% endfor %}
@@ -79,7 +91,7 @@
     {% endfor %}
     </tbody>
   </table>
-  <p class="more"><a href="/contracts/?company={{ co.slug }}">この企業の全契約 →</a></p>
+  <p class="more"><a href="/contracts/?company={{ co.slug }}">この相手方の全契約 →</a></p>
 </section>
 </div>
 

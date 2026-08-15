@@ -17,14 +17,14 @@
 <section>
   <h2>年度別収録状況</h2>
   <table class="data">
-    <thead><tr><th>年度</th><th class="num">取得ファイル数</th><th class="num">取得契約行数</th></tr></thead>
+    <thead><tr><th>年度</th><th class="num">収録月数</th><th class="num">取得ファイル数</th><th class="num">取得契約行数</th></tr></thead>
     <tbody>
     {% for r in agg %}
-      <tr><td>{{ r.fiscal_year | fy }}</td><td class="num">{{ r.files }}</td><td class="num">{{ "{:,}".format(r.rows_) }}</td></tr>
+      <tr><td>{{ r.fiscal_year | fy }}</td><td class="num">{{ r.months }} / 12</td><td class="num">{{ r.files }}</td><td class="num">{{ "{:,}".format(r.rows_) }}</td></tr>
     {% endfor %}
     </tbody>
   </table>
-  <p class="note">PoCのため各年度の一部の月のみを収録しています。年度合計は公表全体の合計ではありません。</p>
+  <p class="note">収録月数が12未満の年度は部分収録です(未公表月を含む)。部分収録年度の前年比較は前年同期で行っています。</p>
 </section>
 
 <section>

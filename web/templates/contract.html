@@ -4,19 +4,32 @@
 <nav class="breadcrumb"><a href="/contracts/">契約検索</a> › 契約詳細</nav>
 <h1 class="contract-title">{{ c.title }}</h1>
 
+{% if c.suspected_duplicate %}
+<div class="callout">
+  <strong>重複疑い:</strong> 同一公表ファイル内に全項目が一致する行が複数あります。
+  公表元が同条件の別契約を複数掲載した可能性と、誤って重複掲載した可能性の両方があるため、
+  削除せずフラグ付きで収録しています。
+</div>
+{% endif %}
+
 <table class="data kv">
   <tr><th>契約日</th><td>{{ c.contract_date or '不明' }} ({{ c.fiscal_year | fy }})</td></tr>
   <tr><th>契約相手方</th><td>
     {% if c.company_slug %}<a href="/companies/{{ c.company_slug }}/">{{ c.company }}</a>{% else %}{{ c.company or '未解決' }}{% endif %}
+    {% if c.entity_type and c.entity_type != 'company' %}<span class="tag">{{ entity_label(c.entity_type) }}</span>{% endif %}
     {% if c.corporate_number %}<span class="muted small">(法人番号: {{ c.corporate_number }})</span>{% endif %}
   </td></tr>
   <tr><th>契約金額</th><td>{{ c.amount | yen }} {% if c.amount %}({{ c.amount | oku }}){% endif %}</td></tr>
   <tr><th>予定価格</th><td>{{ c.planned_price | yen }}</td></tr>
   <tr><th>落札率</th><td>{% if c.award_rate %}{{ '%.1f' | format(c.award_rate * 100) }}%{% else %}—{% endif %}</td></tr>
   <tr><th>契約方式</th><td>{{ c.procurement_method }}</td></tr>
-  <tr><th>調達機関</th><td>{{ c.agency }}{% if c.agency_detail %} <span class="muted small">({{ c.agency_detail }})</span>{% endif %}</td></tr>
-  <tr><th>カテゴリ</th><td>{% if c.category_slug %}<a href="/categories/{{ c.category_slug }}/">{{ c.category }}</a>{% endif %}
-      <span class="muted small">(機械分類 / 確信度 {{ c.classification_confidence }})</span></td></tr>
+  <tr><th>調達機関</th><td>{{ c.agency }}
+      {% if c.agency_department %}<span class="muted small">/ {{ c.agency_department }}</span>{% endif %}
+      {% if c.agency_location %}<span class="muted small">({{ c.agency_location }})</span>{% endif %}</td></tr>
+  <tr><th>装備分野</th><td>{% if c.domain_slug %}<a href="/categories/{{ c.domain_slug }}/">{{ c.domain_name }}</a>{% endif %}
+      <span class="muted small">({% if c.domain_rule_matched %}ルール一致{% else %}未分類{% endif %})</span></td></tr>
+  <tr><th>契約目的</th><td>{% if c.nature_slug %}<a href="/categories/{{ c.nature_slug }}/">{{ c.nature_name }}</a>{% endif %}
+      <span class="muted small">({% if c.nature_rule_matched %}ルール一致{% else %}既定値(物品調達){% endif %})</span></td></tr>
   <tr><th>正規化状態</th><td>{{ c.normalization_status }}{% if c.normalization_flags %} <span class="warn small">{{ c.normalization_flags }}</span>{% endif %}
       <span class="muted small">(v{{ c.normalization_version }})</span></td></tr>
 </table>
@@ -37,7 +50,8 @@
     <tr><th>契約相手方(原文)</th><td class="pre">{{ c.raw_company }}</td></tr>
     <tr><th>契約金額(原文)</th><td class="pre">{{ c.raw_amount }}</td></tr>
     <tr><th>契約締結日(原文)</th><td class="pre">{{ c.raw_contract_date }}</td></tr>
+    <tr><th>契約担当官(原文)</th><td class="pre">{{ c.raw_agency }}</td></tr>
   </table>
-  <p class="note">正規化前の原文はデータベースに全列保持しています。</p>
+  <p class="note">正規化前の原文はデータベースに全列保持しています。分類・正規化は本サイト独自の加工です。</p>
 </section>
 {% endblock %}

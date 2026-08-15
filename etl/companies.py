@@ -67,6 +67,31 @@ import re as _re
 
 US_GOV_RE = _re.compile(r"^米.{1,12}(省|庁|局|隊)$")
 
+# 外国企業の判定(法人番号なしの場合のみ使用):
+# 名称がラテン文字を含む、または住所が国外を示す場合に foreign_company とする。
+_FOREIGN_NAME_RE = _re.compile(r"[A-Za-z]{3,}")
+_FOREIGN_ADDR_RE = _re.compile(
+    r"米国|アメリカ|英国|イギリス|フランス|ドイツ|イタリア|スウェーデン|ノルウェー|"
+    r"オーストラリア|カナダ|イスラエル|韓国|シンガポール|インド|オランダ|ベルギー|"
+    r"スイス|スペイン|フィンランド|UNITED STATES|U\.S\.|UK|USA"
+)
+_JP_ADDR_RE = _re.compile(r"^(東京都|北海道|(?:京都|大阪)府|.{2,3}県)")
+
+
+def guess_entity_type_without_cn(normalized_name: str, address: str) -> str:
+    """法人番号のない相手方のentity_type推定。
+
+    国内住所が読めれば company(個人事業者含む民間)、外国要素があれば foreign_company、
+    どちらとも言えなければ other。
+    """
+    if _FOREIGN_ADDR_RE.search(address or ""):
+        return "foreign_company"
+    if _JP_ADDR_RE.match((address or "").strip()):
+        return "company"
+    if _FOREIGN_NAME_RE.search(normalized_name):
+        return "foreign_company"
+    return "other"
+
 SEED_ENTITY_TYPES = {"独立行政法人": "gov_agency", "国立研究開発法人": "gov_agency"}
 
 

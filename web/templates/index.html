@@ -3,20 +3,21 @@
 {% block content %}
 <section class="hero">
   <h1>防衛調達データベース <span class="poc">PoC</span></h1>
-  <p>防衛装備庁が公表する中央調達の契約情報を収集・正規化し、企業・年度・カテゴリ横断で検索・集計できる産業データベースです。
+  <p>防衛装備庁が公表する中央調達の契約情報を収集・正規化し、企業・年度・分野横断で検索・集計できる産業データベースです。
      政府公開データに基づきます(ニュース・推測情報は含みません)。</p>
 </section>
 
 <section class="stat-row">
   <div class="stat"><div class="stat-label">収録契約件数</div><div class="stat-value">{{ "{:,}".format(stats.n_contracts) }}</div></div>
-  <div class="stat"><div class="stat-label">収録企業・団体数</div><div class="stat-value">{{ "{:,}".format(stats.n_companies) }}</div></div>
-  <div class="stat"><div class="stat-label">最新年度</div><div class="stat-value">{{ stats.max_fy | wareki }}</div></div>
+  <div class="stat"><div class="stat-label">収録契約相手方数</div><div class="stat-value">{{ "{:,}".format(stats.n_companies) }}</div></div>
+  <div class="stat"><div class="stat-label">最新収録年度</div><div class="stat-value">{{ stats.max_fy | wareki }}</div></div>
   <div class="stat"><div class="stat-label">最終データ取得</div><div class="stat-value small">{{ (last_import or '')[:10] }}</div></div>
 </section>
 
 <div class="grid2">
 <section>
   <h2>企業別契約額ランキング <span class="sub">{{ fy | fy }}</span></h2>
+  <p class="note">民間企業(国内・外国)のみ。外国政府(FMS)・公的機関を含む集計は<a href="/rankings/counterparties/">契約相手方ランキング</a>。</p>
   <table class="data">
     <thead><tr><th>#</th><th>企業</th><th class="num">契約総額</th><th class="num">件数</th></tr></thead>
     <tbody>
@@ -40,7 +41,8 @@
     <tbody>
     {% for r in trend %}
       <tr>
-        <td><a href="/contracts/?year={{ r.fiscal_year }}">{{ r.fiscal_year | wareki }}</a></td>
+        <td><a href="/contracts/?year={{ r.fiscal_year }}">{{ r.fiscal_year | wareki }}</a>
+          {% if trend_labels[r.fiscal_year] %}<span class="tag">{{ trend_labels[r.fiscal_year] }}</span>{% endif %}</td>
         <td class="num">{{ r.total | oku }}</td>
         <td class="bar-col"><div class="bar" style="width: {{ (r.total / max_total * 100) | round(1) }}%"></div></td>
         <td class="num">{{ r.n }}</td>
@@ -48,9 +50,9 @@
     {% endfor %}
     </tbody>
   </table>
-  <p class="note">※ 収録済みファイル分のみの合計。全月を収録していない年度を含みます(<a href="/sources/">収録状況</a>)。</p>
+  <p class="note">※ 進行中の年度は収録期間を表示。年度間の単純比較には注意(<a href="/sources/">収録状況</a>)。</p>
 
-  <h2>最近の大型契約</h2>
+  <h2>最近の大型契約 <span class="sub">直近90日</span></h2>
   <table class="data">
     <thead><tr><th>契約日</th><th>件名</th><th class="num">金額</th></tr></thead>
     <tbody>
@@ -67,12 +69,13 @@
 </section>
 </div>
 
+<div class="grid2">
 <section>
-  <h2>カテゴリ</h2>
+  <h2>装備分野別 <span class="sub">全収録期間</span></h2>
   <table class="data">
-    <thead><tr><th>カテゴリ</th><th class="num">契約件数</th><th class="num">契約総額</th></tr></thead>
+    <thead><tr><th>装備分野</th><th class="num">件数</th><th class="num">契約総額</th></tr></thead>
     <tbody>
-    {% for c in cats %}
+    {% for c in domains %}
       <tr>
         <td><a href="/categories/{{ c.slug }}/">{{ c.name }}</a></td>
         <td class="num">{{ c.n }}</td>
@@ -82,4 +85,20 @@
     </tbody>
   </table>
 </section>
+<section>
+  <h2>契約目的別 <span class="sub">全収録期間</span></h2>
+  <table class="data">
+    <thead><tr><th>契約目的</th><th class="num">件数</th><th class="num">契約総額</th></tr></thead>
+    <tbody>
+    {% for c in natures %}
+      <tr>
+        <td><a href="/categories/{{ c.slug }}/">{{ c.name }}</a></td>
+        <td class="num">{{ c.n }}</td>
+        <td class="num">{{ c.total | oku }}</td>
+      </tr>
+    {% endfor %}
+    </tbody>
+  </table>
+</section>
+</div>
 {% endblock %}

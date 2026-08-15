@@ -9,9 +9,13 @@
     <option value="">全年度</option>
     {% for y in years %}<option value="{{ y }}" {% if f.year == y %}selected{% endif %}>{{ y | wareki }}</option>{% endfor %}
   </select>
-  <select name="category">
-    <option value="">全カテゴリ</option>
-    {% for c in cats %}<option value="{{ c.slug }}" {% if f.category == c.slug %}selected{% endif %}>{{ c.name }}</option>{% endfor %}
+  <select name="domain">
+    <option value="">全装備分野</option>
+    {% for c in domains %}<option value="{{ c.slug }}" {% if f.domain == c.slug %}selected{% endif %}>{{ c.name }}</option>{% endfor %}
+  </select>
+  <select name="nature">
+    <option value="">全契約目的</option>
+    {% for c in natures %}<option value="{{ c.slug }}" {% if f.nature == c.slug %}selected{% endif %}>{{ c.name }}</option>{% endfor %}
   </select>
   <select name="method">
     <option value="">全契約方式</option>
@@ -28,15 +32,16 @@
 <div class="table-scroll">
 <table class="data">
   <thead><tr>
-    <th>契約日</th><th>企業</th><th>件名</th><th>カテゴリ</th><th>契約方式</th><th class="num">金額</th>
+    <th>契約日</th><th>契約相手方</th><th>件名</th><th>装備分野</th><th>契約目的</th><th>契約方式</th><th class="num">金額</th>
   </tr></thead>
   <tbody>
   {% for r in rows %}
     <tr>
       <td class="nowrap muted">{{ r.contract_date or '—' }}</td>
       <td>{% if r.company_slug %}<a href="/companies/{{ r.company_slug }}/">{{ r.company | truncate(20) }}</a>{% else %}—{% endif %}</td>
-      <td><a href="/contracts/{{ r.id }}/">{{ r.title | truncate(50) }}</a></td>
-      <td>{% if r.category_slug %}<a href="/categories/{{ r.category_slug }}/">{{ r.category }}</a>{% endif %}</td>
+      <td><a href="/contracts/{{ r.id }}/">{{ r.title | truncate(45) }}</a></td>
+      <td>{% if r.domain_slug %}<a href="/categories/{{ r.domain_slug }}/">{{ r.domain_name }}</a>{% endif %}</td>
+      <td>{% if r.nature_slug %}<a href="/categories/{{ r.nature_slug }}/">{{ r.nature_name }}</a>{% endif %}</td>
       <td class="nowrap">{{ r.procurement_method }}</td>
       <td class="num">{{ r.amount | oku }}</td>
     </tr>

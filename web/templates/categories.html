@@ -2,17 +2,41 @@
 {% block title %}カテゴリ一覧{% endblock %}
 {% block content %}
 <h1>カテゴリ一覧</h1>
-<p class="note">分類は件名キーワードによる機械分類です(<a href="/methodology/">方法論</a>)。分類できない契約は「未分類」として保持しています。</p>
-<table class="data">
-  <thead><tr><th>カテゴリ</th><th class="num">契約件数</th><th class="num">契約総額</th></tr></thead>
-  <tbody>
-  {% for r in rows %}
-    <tr>
-      <td><a href="/categories/{{ r.slug }}/">{{ r.name }}</a></td>
-      <td class="num">{{ r.n }}</td>
-      <td class="num">{{ r.total | oku }}</td>
-    </tr>
-  {% endfor %}
-  </tbody>
-</table>
+<p class="note">件名キーワードによる機械分類です(<a href="/methodology/">方法論</a>)。
+「装備分野(何を調達したか)」と「契約目的(何のための契約か)」は独立した軸として分類しています。
+分類できない契約は「未分類」として保持しています。</p>
+
+<div class="grid2">
+<section>
+  <h2>装備分野</h2>
+  <table class="data">
+    <thead><tr><th>装備分野</th><th class="num">契約件数</th><th class="num">契約総額</th></tr></thead>
+    <tbody>
+    {% for r in domains %}
+      <tr>
+        <td><a href="/categories/{{ r.slug }}/">{{ r.name }}</a></td>
+        <td class="num">{{ r.n }}</td>
+        <td class="num">{{ r.total | oku }}</td>
+      </tr>
+    {% endfor %}
+    </tbody>
+  </table>
+</section>
+<section>
+  <h2>契約目的</h2>
+  <table class="data">
+    <thead><tr><th>契約目的</th><th class="num">契約件数</th><th class="num">契約総額</th></tr></thead>
+    <tbody>
+    {% for r in natures %}
+      <tr>
+        <td><a href="/categories/{{ r.slug }}/">{{ r.name }}</a></td>
+        <td class="num">{{ r.n }}</td>
+        <td class="num">{{ r.total | oku }}</td>
+      </tr>
+    {% endfor %}
+    </tbody>
+  </table>
+  <p class="note">「新規取得」はどの目的ルールにも一致しない物品調達の既定値を含みます。</p>
+</section>
+</div>
 {% endblock %}

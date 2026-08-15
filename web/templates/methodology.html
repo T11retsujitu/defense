@@ -6,7 +6,10 @@
 <section>
   <h2>データ取得方法</h2>
   <p>防衛装備庁が「契約に係る情報の公表（中央調達分）」として公表するExcelファイル(月次・契約方式別)を取得しています。
-     取得は低頻度(リクエスト間隔3秒以上)で行い、取得済みファイルはローカルに保存して再取得しません。
+     取得は低頻度(リクエスト間隔3秒以上)で行い、取得済みファイルはローカルに保存します。
+     未公表月(404)は確認日時付きで記録し、進行中年度は数日で、過去年度は約90日で再確認します。
+     取得済みファイルも約30日間隔でETag/Last-Modifiedによる条件付き再取得を行い、公表元の訂正・差し替えを検知します。
+     差し替えで消えた行はデータベースからも削除します(ゴースト行を残しません)。
      ファイルはSHA-256で同一性を管理し、全レコードが取得元ファイルまで追跡できます。</p>
 </section>
 
@@ -17,24 +20,45 @@
     <li>各自衛隊・地方防衛局等による地方調達</li>
     <li>公表基準未満の契約(令和6年度以前は「基準以上」のみが公表対象)</li>
     <li>秘密保全等の理由で非公表の契約</li>
-    <li>防衛省本省(内部部局・各機関)の一般調達</li>
+    <li>防衛省本省(内部部局・各機関)・防衛装備庁本部の一般調達</li>
   </ul>
   <p>したがって、本サイトの集計は日本の防衛調達全体ではなく、公表された中央調達分の部分集合です。</p>
 </section>
 
 <section>
-  <h2>法人名の正規化</h2>
+  <h2>契約相手方の区分と法人名の正規化</h2>
   <p>公表ファイルに含まれる<strong>法人番号(13桁)</strong>を第一の同定キーとし、同一法人番号の契約を同一企業に集約します。
-     法人番号のない契約相手方(米軍各省などのFMS=対外有償軍事援助等)は、手動管理の辞書で同定します。
-     表記の正規化(全角/半角、（株）→株式会社等)は照合の補助にのみ使い、文字列類似だけで別法人を統合することはしません。
-     未解決の相手方は「未解決」として集計から区別できます。</p>
+     法人番号のない相手方は、辞書(米軍各省等のFMS相手方)・ルール(「米〜省/庁/局」)・住所と名称による区分推定で処理します。
+     同じ表記が複数の法人番号に対応する場合(同名別法人)は自動解決せず「未解決」とします。
+     文字列類似だけで別法人を統合することはありません。</p>
+  <p>契約相手方は次の区分(entity_type)を持ちます: 民間企業(国内) / 外国企業 / 外国政府等(FMS=対外有償軍事援助) / 公的機関 / 区分不明。
+     <strong>「企業ランキング」は民間企業(国内・外国)のみを対象とし、外国政府・公的機関は「契約相手方ランキング」に分離しています。</strong></p>
+  {% if entity_split %}
+  <table class="data">
+    <thead><tr><th>区分</th><th class="num">契約件数</th><th class="num">契約総額</th></tr></thead>
+    <tbody>
+    {% for r in entity_split %}
+      <tr><td>{{ entity_label(r.entity_type) }}</td><td class="num">{{ "{:,}".format(r.n) }}</td><td class="num">{{ r.total | oku }}</td></tr>
+    {% endfor %}
+    </tbody>
+  </table>
+  {% endif %}
 </section>
 
 <section>
-  <h2>カテゴリ分類</h2>
-  <p>契約件名に対するキーワードルール(順序付き・決定的)で分類しています。LLM等の非決定的な分類は使用していません。
-     ルールに一致しない契約は<strong>未分類</strong>のまま保持し、推測で割り当てません。
-     各契約の分類確信度(ルール一致=1.0 / 未分類=0.0)を記録しています。</p>
+  <h2>カテゴリ分類(二軸)</h2>
+  <p>「何を調達したか」と「何のための契約か」は独立した情報であるため、次の二軸で別々に分類します。</p>
+  <ul>
+    <li><strong>装備分野(domain)</strong>: 航空機 / 艦船 / 陸上装備 / 誘導弾・ミサイル / 弾薬・火器 / 無人機 / 宇宙 / C4ISR・電子機器 / IT・ソフトウェア / 共通・その他 / 未分類</li>
+    <li><strong>契約目的(nature)</strong>: 新規取得 / 研究開発 / 維持整備・修理 / 役務・サービス / 燃料・消耗品 / 産業基盤</li>
+  </ul>
+  <p>例: 「極超音速誘導弾等の生産準備役務」は 装備分野=誘導弾・ミサイル、契約目的=役務・サービス。
+     「軽油2号(艦船用)」は 装備分野=艦船、契約目的=燃料・消耗品。</p>
+  <p>分類は契約件名に対するキーワードルール(各軸内で順序付き・決定的)で行い、LLM等の非決定的な手法は使用していません。
+     装備分野がルールに一致しない契約は<strong>未分類</strong>のまま保持します。
+     契約目的が一致しない場合は物品調達の既定値「新規取得」を適用し、既定値適用であることを記録します。</p>
+  <p><strong>rule_matched はルールに一致したかどうかのブール値であり、分類が正しい確率(確信度)ではありません。</strong>
+     キーワード分類には誤分類が含まれ得ます。各契約詳細ページで分類根拠の区分を確認できます。</p>
 </section>
 
 <section>
@@ -43,9 +67,25 @@
     <li>金額は公表ファイルの「契約金額」欄の値(円)です。</li>
     <li><strong>契約金額は企業の防衛関連売上高ではありません。</strong>納期・検収・収益認識の時期は契約締結日と一致しません。</li>
     <li>複数年度にわたる契約(国庫債務負担行為)も契約締結年度に全額を計上しています。</li>
-    <li>変更契約・契約解除による増減は現時点で追跡していません(公表ファイルに含まれる場合は別契約として現れることがあります)。</li>
-    <li>単価契約等で金額の解釈が異なる場合があります。備考欄の注記は原データとして保持しています。</li>
+    <li>変更契約・契約解除による増減は現時点で追跡していません。</li>
+    <li>年度は契約締結日から導出しています(4月開始の日本の会計年度)。</li>
   </ul>
+</section>
+
+<section>
+  <h2>年度比較の方法</h2>
+  <p>デフォルトで表示する年度は「全12か月分の公表ファイルを収録済みの最新年度」です。
+     進行中(部分収録)の年度は収録期間(例: 4〜6月累計)を明示し、
+     前年比較は<strong>前年度の同じ期間(前年同期)</strong>との比較で計算します。
+     部分収録年度の合計を通年の年度合計と比較することはしません。</p>
+</section>
+
+<section>
+  <h2>重複疑いレコード</h2>
+  <p>同一公表ファイル内に全項目が完全一致する行が複数存在する場合があります。
+     公表元が同条件の別契約を複数掲載した可能性と、誤って重複掲載した可能性の両方があるため、
+     自動削除はせず<strong>suspected_duplicate</strong>フラグを付けて収録し、件数・金額を下表で公開しています。
+     集計値には重複疑い行を含みます。</p>
 </section>
 
 <section>
@@ -56,12 +96,15 @@
   <table class="data">
     <thead><tr><th>指標</th><th class="num">件数</th><th class="num">割合</th></tr></thead>
     <tbody>
-      <tr><td>収録契約(全体)</td><td class="num">{{ quality.total }}</td><td class="num">100%</td></tr>
-      <tr><td>正規化OK</td><td class="num">{{ quality.ok }}</td><td class="num">{{ '%.1f' | format(quality.ok / quality.total * 100) }}%</td></tr>
+      <tr><td>収録契約(全体)</td><td class="num">{{ "{:,}".format(quality.total) }}</td><td class="num">100%</td></tr>
+      <tr><td>正規化OK</td><td class="num">{{ "{:,}".format(quality.ok) }}</td><td class="num">{{ '%.1f' | format(quality.ok / quality.total * 100) }}%</td></tr>
       <tr><td>金額parse失敗</td><td class="num">{{ quality.amount_failed }}</td><td class="num">{{ '%.2f' | format(quality.amount_failed / quality.total * 100) }}%</td></tr>
       <tr><td>日付parse失敗</td><td class="num">{{ quality.date_failed }}</td><td class="num">{{ '%.2f' | format(quality.date_failed / quality.total * 100) }}%</td></tr>
       <tr><td>法人未解決</td><td class="num">{{ quality.company_unresolved }}</td><td class="num">{{ '%.2f' | format(quality.company_unresolved / quality.total * 100) }}%</td></tr>
-      <tr><td>カテゴリ未分類</td><td class="num">{{ quality.uncategorized }}</td><td class="num">{{ '%.1f' | format(quality.uncategorized / quality.total * 100) }}%</td></tr>
+      <tr><td>法人同名複数(曖昧)</td><td class="num">{{ quality.company_ambiguous }}</td><td class="num">{{ '%.2f' | format(quality.company_ambiguous / quality.total * 100) }}%</td></tr>
+      <tr><td>装備分野 未分類</td><td class="num">{{ "{:,}".format(quality.domain_unmatched) }}</td><td class="num">{{ '%.1f' | format(quality.domain_unmatched / quality.total * 100) }}%</td></tr>
+      <tr><td>契約目的 既定値適用</td><td class="num">{{ "{:,}".format(quality.nature_defaulted) }}</td><td class="num">{{ '%.1f' | format(quality.nature_defaulted / quality.total * 100) }}%</td></tr>
+      <tr><td>重複疑い</td><td class="num">{{ quality.suspected_duplicates }}</td><td class="num">{{ '%.2f' | format(quality.suspected_duplicates / quality.total * 100) }}% ({{ dup_amount | oku }})</td></tr>
     </tbody>
   </table>
   {% endif %}
@@ -76,10 +119,11 @@
   <h2>当サイトによる加工箇所</h2>
   <ul>
     <li>金額・日付の型変換(和暦→西暦を含む)</li>
-    <li>法人名の表記正規化と法人番号による集約</li>
-    <li>カテゴリの機械分類</li>
+    <li>法人名の表記正規化と法人番号による集約、契約相手方区分の付与</li>
+    <li>装備分野・契約目的の二軸機械分類</li>
     <li>契約方式のファイル区分(競争入札/随意契約)からの補完</li>
     <li>年度の契約締結日からの導出</li>
+    <li>契約担当官欄からの部局・所在地の抽出(氏名は保存しません)</li>
   </ul>
   <p>公表ファイルの原文は加工と分離して全列保持しており、各契約詳細ページで確認できます。</p>
 </section>

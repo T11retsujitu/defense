@@ -1,7 +1,9 @@
 {% extends "base.html" %}
-{% block title %}企業一覧{% endblock %}
+{% block title %}契約相手方一覧{% endblock %}
 {% block content %}
-<h1>企業一覧 <span class="sub">{{ fy | fy }} 契約額順</span></h1>
+<h1>契約相手方一覧 <span class="sub">{{ fy | fy }}{% if plabel %} ({{ plabel }}累計){% endif %} 契約額順</span></h1>
+<p class="note">民間企業のほか、外国政府等(FMS)・公的機関を含む全ての契約相手方を表示しています。
+企業のみの順位は<a href="/rankings/companies/">企業ランキング</a>を参照。</p>
 
 <form class="filters" method="get">
   <select name="year" onchange="this.form.submit()">
@@ -12,13 +14,13 @@
 
 <div class="table-scroll">
 <table class="data">
-  <thead><tr><th>#</th><th>企業・団体</th><th>法人番号</th><th class="num">契約総額</th><th class="num">件数</th></tr></thead>
+  <thead><tr><th>#</th><th>契約相手方</th><th>区分</th><th>法人番号</th><th class="num">契約総額</th><th class="num">件数</th></tr></thead>
   <tbody>
   {% for r in rows %}
     <tr>
       <td class="muted">{{ loop.index }}</td>
-      <td><a href="/companies/{{ r.slug }}/">{{ r.name }}</a>
-        {% if r.entity_type == 'foreign_government' %}<span class="tag">FMS</span>{% endif %}</td>
+      <td><a href="/companies/{{ r.slug }}/">{{ r.name }}</a></td>
+      <td class="small">{{ entity_label(r.entity_type) }}</td>
       <td class="muted small">{{ r.corporate_number or '—' }}</td>
       <td class="num">{{ r.total | oku }}</td>
       <td class="num">{{ r.n }}</td>

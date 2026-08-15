@@ -42,8 +42,9 @@ def main(argv=None):
     job = {
         "started_at": datetime.datetime.now(datetime.timezone.utc).isoformat(),
         "files_fetched": 0, "files_cached": 0, "files_failed": 0,
-        "rows_raw": 0, "rows_inserted": 0, "rows_updated": 0,
+        "rows_raw": 0, "rows_inserted": 0, "rows_updated": 0, "rows_deleted": 0,
         "parse_failures": 0, "companies_unresolved": 0, "uncategorized": 0,
+        "suspected_duplicates": 0,
     }
     lines = []
 
@@ -72,30 +73,33 @@ def main(argv=None):
             continue
 
         source_id = upsert_source(conn, sf, sha256_of(path), len(rows))
-        ins, upd = insert_raw_rows(conn, source_id, sf.fiscal_year, rows)
+        ins, upd, deleted = insert_raw_rows(conn, source_id, sf.fiscal_year, rows)
         stats = normalize_contracts(conn, source_id, sf.method_group)
         conn.commit()
 
         job["rows_raw"] += len(rows)
         job["rows_inserted"] += ins
         job["rows_updated"] += upd
+        job["rows_deleted"] += deleted
         job["parse_failures"] += stats["parse_failures"]
         job["companies_unresolved"] += stats["company_unresolved"]
         job["uncategorized"] += stats["uncategorized"]
-        log.info("%s: rows=%d ins=%d upd=%d parse_fail=%d comp_unres=%d uncat=%d",
-                 sf.cache_name, len(rows), ins, upd,
-                 stats["parse_failures"], stats["company_unresolved"], stats["uncategorized"])
+        job["suspected_duplicates"] += stats["suspected_duplicates"]
+        log.info("%s: rows=%d ins=%d upd=%d del=%d parse_fail=%d comp_unres=%d uncat=%d dup=%d",
+                 sf.cache_name, len(rows), ins, upd, deleted,
+                 stats["parse_failures"], stats["company_unresolved"],
+                 stats["uncategorized"], stats["suspected_duplicates"])
 
     job["finished_at"] = datetime.datetime.now(datetime.timezone.utc).isoformat()
     conn.execute(
         """INSERT INTO import_jobs(started_at, finished_at, files_fetched, files_cached, files_failed,
-               rows_raw, rows_inserted, rows_updated, parse_failures, companies_unresolved,
-               uncategorized, log)
-           VALUES (?,?,?,?,?,?,?,?,?,?,?,?)""",
+               rows_raw, rows_inserted, rows_updated, rows_deleted, parse_failures,
+               companies_unresolved, uncategorized, suspected_duplicates, log)
+           VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)""",
         (job["started_at"], job["finished_at"], job["files_fetched"], job["files_cached"],
          job["files_failed"], job["rows_raw"], job["rows_inserted"], job["rows_updated"],
-         job["parse_failures"], job["companies_unresolved"], job["uncategorized"],
-         "\n".join(lines)),
+         job["rows_deleted"], job["parse_failures"], job["companies_unresolved"],
+         job["uncategorized"], job["suspected_duplicates"], "\n".join(lines)),
     )
     conn.commit()
 

@@ -1,7 +1,19 @@
 {% extends "base.html" %}
-{% block title %}企業ランキング{% endblock %}
+{% block title %}{% if scope == 'companies' %}企業ランキング{% else %}契約相手方ランキング{% endif %}{% endblock %}
 {% block content %}
-<h1>企業契約額ランキング <span class="sub">{{ fy | fy }}</span></h1>
+<h1>{% if scope == 'companies' %}企業契約額ランキング{% else %}契約相手方 契約額ランキング{% endif %}
+  <span class="sub">{{ fy | fy }}{% if plabel %} ({{ plabel }}累計){% endif %}</span></h1>
+
+<nav class="tabs">
+  <a href="/rankings/companies/?year={{ fy }}" {% if scope == 'companies' %}class="active"{% endif %}>企業のみ</a>
+  <a href="/rankings/counterparties/?year={{ fy }}" {% if scope == 'counterparties' %}class="active"{% endif %}>全契約相手方(FMS・公的機関含む)</a>
+</nav>
+
+{% if scope == 'companies' %}
+<p class="note">民間企業(国内・外国)のみを対象とし、外国政府等(FMS)・公的機関は除外しています。</p>
+{% else %}
+<p class="note">外国政府等(FMS=対外有償軍事援助)・公的機関を含む全ての契約相手方の集計です。</p>
+{% endif %}
 
 <form class="filters" method="get">
   <select name="year" onchange="this.form.submit()">
@@ -12,13 +24,15 @@
 
 <div class="table-scroll">
 <table class="data">
-  <thead><tr><th>順位</th><th>企業・団体</th><th class="num">契約総額</th><th class="num">件数</th><th class="num">前年比</th></tr></thead>
+  <thead><tr><th>順位</th><th>契約相手方</th>{% if scope != 'companies' %}<th>区分</th>{% endif %}<th class="num">契約総額</th><th class="num">件数</th><th class="num">{% if plabel %}前年同期比{% else %}前年比{% endif %}</th></tr></thead>
   <tbody>
   {% for r in rows %}
     {% set prev = prev_totals.get(r.slug) %}
     <tr>
       <td class="muted">{{ loop.index }}</td>
-      <td><a href="/companies/{{ r.slug }}/">{{ r.name }}</a></td>
+      <td><a href="/companies/{{ r.slug }}/">{{ r.name }}</a>
+        {% if scope == 'companies' and r.entity_type == 'foreign_company' %}<span class="tag">外国企業</span>{% endif %}</td>
+      {% if scope != 'companies' %}<td class="small">{{ entity_label(r.entity_type) }}</td>{% endif %}
       <td class="num">{{ r.total | oku }}</td>
       <td class="num">{{ r.n }}</td>
       <td class="num">{% if prev %}{{ '%+.1f' | format((r.total - prev) / prev * 100) }}%{% else %}—{% endif %}</td>
@@ -27,5 +41,5 @@
   </tbody>
 </table>
 </div>
-<p class="note">※ 収録済みファイル分のみの集計。前年比は前年度の収録範囲との比較であり、月数が揃わない場合は参考値です。</p>
+<p class="note">※ 収録済みファイル分のみの集計。{% if plabel %}進行中年度のため、前年比較は前年度の同期間({{ plabel }})と行っています。{% endif %}</p>
 {% endblock %}

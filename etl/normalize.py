@@ -10,7 +10,7 @@ import datetime
 import re
 import unicodedata
 
-NORMALIZATION_VERSION = "0.1.0"
+NORMALIZATION_VERSION = "0.2.0"
 
 # 元号 -> 開始西暦(元年=1)
 _ERA_STARTS = {
@@ -169,11 +169,49 @@ def fiscal_year_of(d: datetime.date) -> int:
     return d.year if d.month >= 4 else d.year - 1
 
 
-def shorten_agency_detail(raw_agency: str | None) -> str | None:
-    """契約担当官セルから部局名を1行に短縮(氏名・所在地を落とす)。"""
+_LOCATION_RE = re.compile(r"^(東京都|北海道|(?:京都|大阪)府|.{2,3}県)")
+
+
+def parse_agency(raw_agency: str | None) -> dict:
+    """契約担当官セルを構造化する。
+
+    実データの典型(99%超):
+      5行: 官職 / 組織(防衛装備庁) / 部局・役職(調達事業部長 等) / 氏名 / 所在地
+      4行: 官職 / 組織+役職(防衛装備庁長官) / 氏名 / 所在地
+    氏名(個人名)は保存しない。原文は raw_contracts.raw_agency に全文残る。
+    返り値: {organization, department, location}
+    """
+    out = {"organization": None, "department": None, "location": None}
     if not raw_agency:
-        return None
+        return out
     lines = [ln.strip() for ln in str(raw_agency).splitlines() if ln.strip()]
-    # 「分任支出負担行為担当官」等の官職行と氏名を除き、組織名らしい行を拾う
-    orgs = [ln for ln in lines if ("庁" in ln or "省" in ln or "部" in ln or "隊" in ln) and "担当官" not in ln]
-    return orgs[0] if orgs else (lines[0] if lines else None)
+    if not lines:
+        return out
+    rest = []
+    for ln in lines:
+        if "担当官" in ln and out["organization"] is None and not rest:
+            continue  # 官職行(支出負担行為担当官 等)
+        if _LOCATION_RE.match(ln):
+            out["location"] = ln
+            continue
+        rest.append(ln)
+    # rest = [組織(+役職)], [部局・役職], [氏名...]
+    if rest:
+        m = re.match(r"^(.*?(?:庁|省))(.*)$", rest[0])
+        if m:
+            out["organization"] = m.group(1)
+            trailing = m.group(2).strip()
+            dept_parts = [trailing] if trailing else []
+        else:
+            out["organization"] = rest[0]
+            dept_parts = []
+        # 2行目以降のうち、氏名らしい行(組織語を含まない短行)を除いて部局とする
+        for ln in rest[1:]:
+            if re.search(r"[庁省部官課室隊局]", ln):
+                dept_parts.append(ln)
+        if dept_parts:
+            dept = "".join(dept_parts)
+            # 役職と氏名が同一行の場合(例:「長官　土 本  英 樹」)、空白以降の氏名を落とす
+            dept = re.split(r"[\s　]+", dept)[0]
+            out["department"] = dept or None
+    return out

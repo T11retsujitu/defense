@@ -87,6 +87,11 @@ table.kv th { width: 11em; color: var(--muted); font-weight: 600; }
 .filters button { background: var(--accent); color: #fff; border-color: var(--accent); cursor: pointer; }
 
 .result-count { color: var(--ink-2); font-size: 13px; }
+.filters-static { font-size: 13px; color: var(--ink-2); margin: 14px 0; }
+.static-banner {
+  border: 1px solid var(--line); background: var(--bg-2); border-radius: 6px;
+  padding: 8px 14px; font-size: 12px; color: var(--muted); margin: 12px 0 0;
+}
 
 /* tabs (ランキングの企業/全相手方切替) */
 .tabs { display: flex; gap: 0; margin: 12px 0; border-bottom: 1px solid var(--line); }

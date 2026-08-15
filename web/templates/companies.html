@@ -5,12 +5,18 @@
 <p class="note">民間企業のほか、外国政府等(FMS)・公的機関を含む全ての契約相手方を表示しています。
 企業のみの順位は<a href="/rankings/companies/">企業ランキング</a>を参照。</p>
 
+{% if static_build %}
+<p class="filters-static">年度:
+  {% for y in years %}{% if fy == y %}<strong>{{ y | wareki }}</strong>{% else %}<a href="/companies/?year={{ y }}">{{ y | wareki }}</a>{% endif %}{% if not loop.last %} | {% endif %}{% endfor %}
+</p>
+{% else %}
 <form class="filters" method="get">
   <select name="year" onchange="this.form.submit()">
     {% for y in years %}<option value="{{ y }}" {% if fy == y %}selected{% endif %}>{{ y | wareki }}</option>{% endfor %}
   </select>
   <noscript><button type="submit">表示</button></noscript>
 </form>
+{% endif %}
 
 <div class="table-scroll">
 <table class="data">

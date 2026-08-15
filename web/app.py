@@ -12,6 +12,7 @@
 from __future__ import annotations
 
 import math
+import os
 import sqlite3
 from pathlib import Path
 
@@ -21,6 +22,12 @@ ROOT = Path(__file__).resolve().parent.parent
 DB_PATH = ROOT / "data" / "db" / "procurement.db"
 
 app = Flask(__name__)
+
+# 静的書き出しモード(web/freeze.py が使用)。
+# GitHub Pages等ではサーバー処理が動かないため、検索フォームを非表示にし
+# 年度切替等を事前生成ページへのリンクに置き換える。
+STATIC_BUILD = os.environ.get("STATIC_BUILD") == "1"
+app.jinja_env.globals["static_build"] = STATIC_BUILD
 
 PER_PAGE = 100
 COMPANY_TYPES = ("company", "foreign_company")

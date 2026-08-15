@@ -65,6 +65,30 @@
     {% endfor %}
     </tbody>
   </table>
+
+  <h2>市場区分構成 <span class="sub">全収録期間</span></h2>
+  <table class="data">
+    <thead><tr><th>市場区分</th><th class="num">契約総額</th><th class="num">件数</th></tr></thead>
+    <tbody>
+    {% for r in scopes %}
+      <tr><td><a href="/categories/{{ r.slug }}/">{{ r.name }}</a></td>
+          <td class="num">{{ r.total | oku }}</td><td class="num">{{ r.n }}</td></tr>
+    {% endfor %}
+    </tbody>
+  </table>
+
+  {% if org_split | length > 1 %}
+  <h2>調達機関別 <span class="sub">全収録期間</span></h2>
+  <table class="data">
+    <thead><tr><th>調達機関</th><th class="num">契約総額</th><th class="num">件数</th></tr></thead>
+    <tbody>
+    {% for r in org_split %}
+      <tr><td>{{ r.organization }}</td>
+          <td class="num">{{ r.total | oku }}</td><td class="num">{{ r.n }}</td></tr>
+    {% endfor %}
+    </tbody>
+  </table>
+  {% endif %}
 </section>
 
 <section>

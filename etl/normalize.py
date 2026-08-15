@@ -10,7 +10,7 @@ import datetime
 import re
 import unicodedata
 
-NORMALIZATION_VERSION = "0.2.0"
+NORMALIZATION_VERSION = "0.3.0"
 
 # 元号 -> 開始西暦(元年=1)
 _ERA_STARTS = {
@@ -60,6 +60,19 @@ def parse_date(value) -> datetime.date | None:
 
 
 _AMOUNT_UNIT = {"億": 100_000_000, "万": 10_000, "千": 1_000}
+
+_BLANK_MARKS = {"", "-", "―", "－", "—", "‐", "ー"}
+
+
+def is_blank_value(value) -> bool:
+    """セルが「記載なし」(空・ダッシュ類)か。地方調達の非公表金額(「－」)の判定に使う。
+
+    「parse失敗」(内容があるのに読めない)と「非公表・記載なし」を
+    区別して記録するための判定。
+    """
+    if value is None:
+        return True
+    return nfkc(str(value)).strip() in _BLANK_MARKS
 
 
 def parse_amount(value) -> int | None:
@@ -197,7 +210,7 @@ def parse_agency(raw_agency: str | None) -> dict:
         rest.append(ln)
     # rest = [組織(+役職)], [部局・役職], [氏名...]
     if rest:
-        m = re.match(r"^(.*?(?:庁|省))(.*)$", rest[0])
+        m = re.match(r"^(.*?(?:庁|省|防衛局|支局|事務所))(.*)$", rest[0])
         if m:
             out["organization"] = m.group(1)
             trailing = m.group(2).strip()

@@ -16,7 +16,7 @@ from pathlib import Path
 
 from .fetch import fetch_file, sha256_of
 from .load import init_schema, insert_raw_rows, normalize_contracts, open_db, upsert_source
-from .parse import ParseError, parse_xlsx
+from .parse import ParseError, parse_source_file
 from .sources import list_source_files
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -33,6 +33,8 @@ def main(argv=None):
     ap.add_argument("--years", nargs="+", type=int, default=[2023, 2024, 2025, 2026],
                     help="対象会計年度(西暦, 令和5年度=2023)")
     ap.add_argument("--offline", action="store_true", help="ダウンロードせずdata/rawのみ使用")
+    ap.add_argument("--sources", nargs="+", default=None,
+                    help="対象ソース系統(atla / n-kanto)。省略時は全系統")
     ap.add_argument("--db", type=Path, default=DB_PATH)
     args = ap.parse_args(argv)
 
@@ -48,7 +50,7 @@ def main(argv=None):
     }
     lines = []
 
-    for sf in list_source_files(args.years):
+    for sf in list_source_files(args.years, sources=args.sources):
         path = RAW_DIR / sf.cache_name
         if args.offline:
             if not path.exists() or path.stat().st_size == 0:
@@ -65,7 +67,7 @@ def main(argv=None):
         job["files_fetched" if status == "fetched" else "files_cached"] += 1
 
         try:
-            rows = parse_xlsx(path)
+            rows = parse_source_file(path, sf.file_format)
         except Exception as e:  # ParseError / BadZipFile / openpyxl例外
             # 1ファイルの破損で取込全体を止めない(ファイル単位で失敗記録)
             job["files_failed"] += 1

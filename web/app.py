@@ -221,6 +221,15 @@ def index():
         """SELECT cat.name, cat.slug, COUNT(*) n, SUM(c.amount) total
            FROM contracts c JOIN categories cat ON cat.id = c.nature_category_id
            GROUP BY cat.id ORDER BY cat.sort_order""").fetchall()
+    scopes = conn.execute(
+        """SELECT cat.name, cat.slug, COUNT(*) n, SUM(c.amount) total
+           FROM contracts c JOIN categories cat ON cat.id = c.scope_category_id
+           GROUP BY cat.id ORDER BY cat.sort_order""").fetchall()
+    orgs = conn.execute(
+        """SELECT s.organization, COUNT(*) n, SUM(c.amount) total
+           FROM contracts c JOIN sources s ON s.id = c.source_id
+           WHERE c.amount IS NOT NULL
+           GROUP BY s.organization ORDER BY total DESC""").fetchall()
     trend = conn.execute(
         """SELECT fiscal_year, SUM(amount) total, COUNT(*) n
            FROM contracts WHERE amount IS NOT NULL
@@ -230,8 +239,9 @@ def index():
     return render_template(
         "index.html", stats=stats, last_import=last_import, fy=fy,
         ranking=ranking, recent_large=recent_large, domains=domains,
-        natures=natures, trend=trend, max_total=max_total,
-        trend_labels=trend_labels, coverage=classification_coverage(conn))
+        natures=natures, scopes=scopes, orgs=orgs, trend=trend,
+        max_total=max_total, trend_labels=trend_labels,
+        coverage=classification_coverage(conn))
 
 
 @app.route("/contracts/")
@@ -242,6 +252,8 @@ def contracts():
     company = request.args.get("company", "").strip()
     domain = request.args.get("domain", "").strip()
     nature = request.args.get("nature", "").strip()
+    scope = request.args.get("scope", "").strip()
+    org = request.args.get("org", "").strip()
     method = request.args.get("method", "").strip()
     amount_min = request.args.get("amount_min", type=float)  # 億円
     amount_max = request.args.get("amount_max", type=float)
@@ -263,6 +275,12 @@ def contracts():
     if nature:
         where.append("ncat.slug = ?")
         params.append(nature)
+    if scope:
+        where.append("scat.slug = ?")
+        params.append(scope)
+    if org:
+        where.append("s.organization = ?")
+        params.append(org)
     if method:
         where.append("c.procurement_method = ?")
         params.append(method)
@@ -277,13 +295,16 @@ def contracts():
         LEFT JOIN companies co ON co.id = c.company_id
         LEFT JOIN categories dcat ON dcat.id = c.domain_category_id
         LEFT JOIN categories ncat ON ncat.id = c.nature_category_id
+        LEFT JOIN categories scat ON scat.id = c.scope_category_id
+        JOIN sources s ON s.id = c.source_id
         WHERE {' AND '.join(where)}"""
     total = conn.execute(f"SELECT COUNT(*) n {base_sql}", params).fetchone()["n"]
     rows = conn.execute(
         f"""SELECT c.id, c.contract_date, c.fiscal_year, c.title, c.amount,
                    c.procurement_method, co.name company, co.slug company_slug,
                    dcat.name domain_name, dcat.slug domain_slug,
-                   ncat.name nature_name, ncat.slug nature_slug
+                   ncat.name nature_name, ncat.slug nature_slug,
+                   s.organization organization
             {base_sql}
             ORDER BY c.contract_date DESC, c.amount DESC
             LIMIT ? OFFSET ?""",
@@ -294,12 +315,17 @@ def contracts():
         "SELECT name, slug FROM categories WHERE axis='domain' ORDER BY sort_order").fetchall()
     natures = conn.execute(
         "SELECT name, slug FROM categories WHERE axis='nature' ORDER BY sort_order").fetchall()
+    scopes = conn.execute(
+        "SELECT name, slug FROM categories WHERE axis='scope' ORDER BY sort_order").fetchall()
+    orgs = [r["organization"] for r in conn.execute(
+        "SELECT DISTINCT organization FROM sources ORDER BY 1")]
     pages = max(math.ceil(total / PER_PAGE), 1)
     return render_template(
         "contracts.html", rows=rows, total=total, page=page, pages=pages,
         years=fy_list(), methods=methods, domains=domains, natures=natures,
+        scopes=scopes, orgs=orgs,
         f={"q": q, "year": year, "company": company, "domain": domain,
-           "nature": nature, "method": method,
+           "nature": nature, "scope": scope, "org": org, "method": method,
            "amount_min": amount_min, "amount_max": amount_max})
 
 
@@ -353,6 +379,16 @@ def company(slug):
            FROM contracts c JOIN categories cat ON cat.id = c.nature_category_id
            WHERE c.company_id=? AND c.amount IS NOT NULL
            GROUP BY cat.id ORDER BY total DESC""", (co["id"],)).fetchall()
+    scopes = conn.execute(
+        """SELECT cat.name, cat.slug, SUM(c.amount) total, COUNT(*) n
+           FROM contracts c JOIN categories cat ON cat.id = c.scope_category_id
+           WHERE c.company_id=? AND c.amount IS NOT NULL
+           GROUP BY cat.id ORDER BY total DESC""", (co["id"],)).fetchall()
+    org_split = conn.execute(
+        """SELECT s.organization, SUM(c.amount) total, COUNT(*) n
+           FROM contracts c JOIN sources s ON s.id = c.source_id
+           WHERE c.company_id=? AND c.amount IS NOT NULL
+           GROUP BY s.organization ORDER BY total DESC""", (co["id"],)).fetchall()
     recent = conn.execute(
         """SELECT id, contract_date, title, amount, procurement_method, fiscal_year
            FROM contracts WHERE company_id=?
@@ -369,6 +405,7 @@ def company(slug):
     return render_template(
         "company.html", co=co, fy=fy, yearly=yearly, cur=cur, yoy=yoy,
         plabel=plabel, rank=rank, domains=domains, natures=natures,
+        scopes=scopes, org_split=org_split,
         recent=recent, largest=largest, max_total=max_total, aliases=aliases,
         yearly_labels=yearly_labels)
 
@@ -384,8 +421,12 @@ def categories():
         """SELECT cat.name, cat.slug, COUNT(*) n, SUM(c.amount) total
            FROM contracts c JOIN categories cat ON cat.id = c.nature_category_id
            GROUP BY cat.id ORDER BY cat.sort_order""").fetchall()
+    scopes = conn.execute(
+        """SELECT cat.name, cat.slug, COUNT(*) n, SUM(c.amount) total
+           FROM contracts c JOIN categories cat ON cat.id = c.scope_category_id
+           GROUP BY cat.id ORDER BY cat.sort_order""").fetchall()
     return render_template("categories.html", domains=domains, natures=natures,
-                           coverage=classification_coverage(conn))
+                           scopes=scopes, coverage=classification_coverage(conn))
 
 
 @app.route("/categories/<slug>/")
@@ -394,7 +435,8 @@ def category(slug):
     cat = conn.execute("SELECT * FROM categories WHERE slug=?", (slug,)).fetchone()
     if not cat:
         abort(404)
-    col = "domain_category_id" if cat["axis"] == "domain" else "nature_category_id"
+    col = {"domain": "domain_category_id", "nature": "nature_category_id",
+           "scope": "scope_category_id"}[cat["axis"]]
     fy = default_fy()
     mmap = fy_months_map()
     yearly = conn.execute(
@@ -419,7 +461,7 @@ def category(slug):
            ORDER BY c.amount DESC LIMIT 10""", (cat["id"],)).fetchall()
     max_total = max((r["total"] or 0 for r in yearly), default=1)
     yearly_labels = {r["fiscal_year"]: period_label(r["fiscal_year"], mmap) for r in yearly}
-    filter_param = "domain" if cat["axis"] == "domain" else "nature"
+    filter_param = cat["axis"]  # domain / nature / scope (契約検索のクエリ名と一致)
     return render_template(
         "category.html", cat=cat, fy=fy, yearly=yearly, cur=cur, yoy=yoy,
         plabel=plabel, top_companies=top_companies, recent=recent,
@@ -495,11 +537,16 @@ def methodology():
         """SELECT
              SUM(CASE WHEN normalization_status='ok' THEN 1 ELSE 0 END) ok,
              SUM(CASE WHEN normalization_flags LIKE '%amount_failed%' THEN 1 ELSE 0 END) amount_failed,
+             SUM(CASE WHEN normalization_flags LIKE '%amount_missing%' THEN 1 ELSE 0 END) amount_missing,
              SUM(CASE WHEN normalization_flags LIKE '%date_failed%' THEN 1 ELSE 0 END) date_failed,
              SUM(CASE WHEN normalization_flags LIKE '%company_unresolved%' THEN 1 ELSE 0 END) company_unresolved,
              SUM(CASE WHEN normalization_flags LIKE '%company_ambiguous%' THEN 1 ELSE 0 END) company_ambiguous,
+             SUM(CASE WHEN normalization_flags LIKE '%company_withheld%' THEN 1 ELSE 0 END) company_withheld,
              SUM(CASE WHEN domain_rule_matched=0 THEN 1 ELSE 0 END) domain_unmatched,
              SUM(CASE WHEN nature_rule_matched=0 THEN 1 ELSE 0 END) nature_defaulted,
+             SUM(CASE WHEN scope_rule_matched=1 THEN 1 ELSE 0 END) scope_keyword,
+             SUM(CASE WHEN scope_category_id=(SELECT id FROM categories WHERE slug='scope-uncategorized')
+                 THEN 1 ELSE 0 END) scope_unclassified,
              SUM(suspected_duplicate) suspected_duplicates,
              COUNT(*) total
            FROM contracts""").fetchone()
@@ -527,6 +574,8 @@ def contract_detail(cid):
                   co.entity_type,
                   dcat.name domain_name, dcat.slug domain_slug,
                   ncat.name nature_name, ncat.slug nature_slug,
+                  scat.name scope_name, scat.slug scope_slug,
+                  s.organization source_organization,
                   s.title source_title, s.url source_url, s.landing_page, s.license,
                   r.raw_row_json, r.raw_company, r.raw_amount, r.raw_contract_date,
                   r.raw_agency
@@ -534,6 +583,7 @@ def contract_detail(cid):
            LEFT JOIN companies co ON co.id=c.company_id
            LEFT JOIN categories dcat ON dcat.id=c.domain_category_id
            LEFT JOIN categories ncat ON ncat.id=c.nature_category_id
+           LEFT JOIN categories scat ON scat.id=c.scope_category_id
            JOIN sources s ON s.id=c.source_id
            JOIN raw_contracts r ON r.id=c.raw_contract_id
            WHERE c.id=?""", (cid,)).fetchone()

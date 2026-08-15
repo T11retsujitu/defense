@@ -44,4 +44,23 @@
   <p class="note">「物品取得・その他」はどの目的ルールにも一致しない契約の既定値(仮定)です。</p>
 </section>
 </div>
+
+<section>
+  <h2>市場区分</h2>
+  <p class="note">地方調達を収録すると、装備品と基地向けの一般契約(食料・清掃・事務用品等)が同じデータベースに入ります。
+  「防衛産業を見たい」場合は任務装備・任務支援を、「自衛隊向けの営業先を探したい」場合は全区分をご覧ください。
+  キーワード一致(scope_rule_matched=1)のほか、装備分野・契約目的軸からの導出(=0)で補完しています。</p>
+  <table class="data">
+    <thead><tr><th>市場区分</th><th class="num">契約件数</th><th class="num">契約総額</th></tr></thead>
+    <tbody>
+    {% for r in scopes %}
+      <tr>
+        <td><a href="/categories/{{ r.slug }}/">{{ r.name }}</a></td>
+        <td class="num">{{ r.n }}</td>
+        <td class="num">{{ r.total | oku }}</td>
+      </tr>
+    {% endfor %}
+    </tbody>
+  </table>
+</section>
 {% endblock %}

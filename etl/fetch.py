@@ -108,6 +108,17 @@ def validate_xlsx_bytes(data: bytes) -> bool:
         return False
 
 
+def validate_pdf_bytes(data: bytes) -> bool:
+    """PDFとしての最低限の整合性検査(ヘッダと終端のEOFマーカー)。"""
+    return data[:5] == b"%PDF-" and b"%%EOF" in data[-1024:]
+
+
+def _validate_bytes(data: bytes, sf: SourceFile) -> bool:
+    if getattr(sf, "file_format", "xlsx") == "pdf":
+        return validate_pdf_bytes(data)
+    return validate_xlsx_bytes(data)
+
+
 def _download(sf: SourceFile, dest: Path, prev_meta: dict | None = None):
     """条件付きGET。返り値: ('fetched'|'unchanged'|'missing'|'error', headers|None)
 
@@ -126,8 +137,8 @@ def _download(sf: SourceFile, dest: Path, prev_meta: dict | None = None):
         with urllib.request.urlopen(req, timeout=60) as resp:
             data = resp.read()
             resp_headers = dict(resp.headers)
-        if not validate_xlsx_bytes(data):
-            log.warning("invalid/truncated xlsx content: %s", sf.url)
+        if not _validate_bytes(data, sf):
+            log.warning("invalid/truncated content: %s", sf.url)
             return "error", None
         dest.parent.mkdir(parents=True, exist_ok=True)
         tmp = dest.with_suffix(dest.suffix + ".part")

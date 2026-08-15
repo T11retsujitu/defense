@@ -1,11 +1,17 @@
-"""カテゴリ分類(ルールベース・二軸)。
+"""カテゴリ分類(ルールベース・三軸)。
 
 単一階層に「装備分野」「契約目的」「品目種別」が混在すると、
 「何を調達したか」と「何のための契約か」のどちらかが失われるため、
-以下の二軸で独立に分類する。
+以下の軸で独立に分類する。
 
   domain (装備分野): 何に関する調達か — 航空機 / 艦船 / 陸上装備 / 誘導弾 / ...
   nature (契約目的): 何のための契約か — 新規取得 / 研究開発 / 維持整備 / 役務 / ...
+  scope  (市場区分): どの市場の契約か — 任務装備 / 任務支援 / 基地インフラ /
+                     基地運営 / 一般物品・事務 / 糧食・食料
+    地方調達を収録すると装備品と食パン・草刈りが同じDBに入るため、
+    「防衛産業を見たい」(任務系)と「自衛隊向けに営業したい」(全部)を
+    使い分けられるようにする軸。キーワード一致(rule_matched=1)を優先し、
+    一致しない場合はdomain/nature軸からの導出(rule_matched=0)で補完する。
 
 例: 「極超音速誘導弾等の生産準備役務」 → domain=誘導弾・ミサイル, nature=役務・サービス
     「軽油2号(艦船用)」            → domain=艦船, nature=燃料・消耗品
@@ -155,6 +161,65 @@ DOMAIN_SLUGS = {name: slug for name, slug, _ in DOMAIN_RULES}
 DOMAIN_SLUGS[DOMAIN_UNCLASSIFIED] = "uncategorized"
 NATURE_SLUGS = {name: slug for name, slug, _ in NATURE_RULES}
 NATURE_SLUGS[NATURE_DEFAULT] = "acquisition"
+
+# ---- scope軸(市場区分) ----
+SCOPE_UNCLASSIFIED = "未分類(市場区分)"
+
+# キーワードルール(上から順に評価)。基地・庁舎向けの契約は地方調達に典型。
+SCOPE_RULES: list[tuple[str, str, list[str | re.Pattern]]] = [
+    ("糧食・食料", "food", [
+        "糧食", "食料品", "食肉", "精米", "食パン", "パン", "麺", "野菜", "馬鈴薯",
+        "弁当", "牛乳", "乳製品", "飲料", "冷凍食品", "缶詰", "調味料", "鶏卵",
+    ]),
+    # 基地運営(動作・役務)を基地インフラ(対象物)より先に評価する:
+    # 「宿舎の警備業務」は警備(運営)であって宿舎(インフラ)ではない
+    ("基地運営", "base-operation", [
+        "警備", "清掃", "廃棄物", "ごみ", "草刈", "除草", "剪定", "伐採",
+        "宿舎管理", "給食業務", "洗濯", "害虫駆除", "健康診断", "検診",
+        "運行管理", "除雪",
+    ]),
+    ("基地インフラ", "base-infrastructure", [
+        "庁舎", "宿舎", "隊舎", "空調設備", "電気設備", "給排水", "浄化槽",
+        "ボイラー", "エレベーター", "昇降機", "消防設備", "貯水槽", "受変電",
+        "自家発電設備", "太陽光", "舗装", "フェンス", "門扉", "植栽", "造成",
+        "防音", "外構",
+    ]),
+    ("一般物品・事務", "general-goods", [
+        "事務用品", "事務機器", "複写機", "コピー機", "プリンタ", "トナー",
+        "コピー用紙", "什器", "机", "椅子", "書籍", "新聞", "雑誌", "文房具",
+        "日用品",
+    ]),
+    ("任務装備", "mission-equipment", []),   # 主にdomain/nature軸から導出
+    ("任務支援", "mission-support", []),     # 主にdomain/nature軸から導出
+]
+
+SCOPE_SLUGS = {name: slug for name, slug, _ in SCOPE_RULES}
+SCOPE_SLUGS[SCOPE_UNCLASSIFIED] = "scope-uncategorized"
+
+# nature軸のうち「調達物そのもの」を意味する目的(→任務装備に導出)
+_EQUIPMENT_NATURES = {"物品取得・その他", "改修・能力向上", "研究開発", "産業基盤"}
+
+
+def classify_scope(title: str, domain_name: str, domain_matched: bool,
+                   nature_name: str) -> tuple[str, bool]:
+    """市場区分(scope)を分類する。返り値: (scope名, rule_matched)
+
+    rule_matched=1 はキーワード一致。0 はdomain/nature軸からの導出
+    (装備分野が判明している契約は任務系とみなす)または未分類。
+    """
+    if title:
+        text = title
+        text_nfkc = nfkc(title)
+        matched = _match(SCOPE_RULES, text, text_nfkc)
+        if matched:
+            return matched, True
+    if domain_matched and domain_name != "共通・その他":
+        if nature_name in _EQUIPMENT_NATURES:
+            return "任務装備", False
+        return "任務支援", False
+    if domain_name == "共通・その他" and domain_matched:
+        return "任務支援", False  # 被服・需品・医療等の部隊向け共通品
+    return SCOPE_UNCLASSIFIED, False
 
 
 def _match(rules, text, text_nfkc):

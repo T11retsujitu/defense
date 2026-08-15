@@ -5,6 +5,7 @@ openpyxlで再現した合成データ。実在の契約データは含まない
 列名・列順の年度差(列の入れ替え・欠落)への耐性を確認する。
 """
 import datetime
+from pathlib import Path
 
 import openpyxl
 import pytest
@@ -103,3 +104,25 @@ def test_header_not_found_raises(tmp_path):
     wb.save(p)
     with pytest.raises(ParseError):
         parse_xlsx(p)
+
+
+# ---- 地方調達PDF(付紙様式第3/第4) ----
+
+def test_parse_pdf_nkanto_kyoso():
+    """実ファイル(リポジトリ同梱キャッシュ)でPDFパーサを検証する。"""
+    import pytest
+    path = Path(__file__).resolve().parent.parent / "data" / "raw" / "rdb_n_kanto" / "n-b-0704.pdf"
+    if not path.exists():
+        pytest.skip("n-kanto cache not present")
+    from etl.parse import parse_pdf
+    rows = parse_pdf(path)
+    assert len(rows) > 10
+    required = {"title", "contract_date", "company", "amount"}
+    for r in rows:
+        assert required.issubset(r.values.keys())
+    # 和暦日付・円表記金額が正規化層で読めること
+    from etl import normalize as N
+    parsed_dates = [N.parse_date(r.values["contract_date"]) for r in rows]
+    parsed_amounts = [N.parse_amount(r.values["amount"]) for r in rows]
+    assert all(d is not None for d in parsed_dates)
+    assert sum(a is not None for a in parsed_amounts) == len(rows)

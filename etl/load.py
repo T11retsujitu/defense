@@ -16,15 +16,16 @@ from pathlib import Path
 from . import normalize as N
 from .categories import (
     DOMAIN_RULES, DOMAIN_SLUGS, DOMAIN_UNCLASSIFIED,
-    NATURE_RULES, NATURE_SLUGS, NATURE_DEFAULT, classify,
-    domain_unmatched_reason,
+    NATURE_RULES, NATURE_SLUGS, NATURE_DEFAULT,
+    SCOPE_RULES, SCOPE_SLUGS, SCOPE_UNCLASSIFIED,
+    classify, classify_scope, domain_unmatched_reason,
 )
 from .companies import (
     SEED_COMPANIES, US_GOV_RE, derive_slug_base, guess_entity_type_without_cn,
     lookup_foreign_entity, seed_entity_type,
 )
 from .parse import RawRow
-from .sources import LICENSE, LANDING_PAGE, ORGANIZATION, SourceFile
+from .sources import LICENSE
 
 
 def _stable_hash(text: str, n: int = 12) -> str:
@@ -66,6 +67,15 @@ def _seed_categories(conn):
         "INSERT OR IGNORE INTO categories(axis, name, slug, sort_order) VALUES ('nature',?,?,997)",
         (NATURE_DEFAULT, NATURE_SLUGS[NATURE_DEFAULT]),
     )
+    for i, (name, slug, _kw) in enumerate(SCOPE_RULES):
+        conn.execute(
+            "INSERT OR IGNORE INTO categories(axis, name, slug, sort_order) VALUES ('scope',?,?,?)",
+            (name, slug, i),
+        )
+    conn.execute(
+        "INSERT OR IGNORE INTO categories(axis, name, slug, sort_order) VALUES ('scope',?,?,996)",
+        (SCOPE_UNCLASSIFIED, SCOPE_SLUGS[SCOPE_UNCLASSIFIED]),
+    )
 
 
 def _seed_companies(conn):
@@ -82,7 +92,7 @@ def _seed_companies(conn):
         )
 
 
-def upsert_source(conn, sf: SourceFile, sha256: str, row_count: int) -> int:
+def upsert_source(conn, sf, sha256: str, row_count: int) -> int:
     conn.execute(
         """INSERT INTO sources(organization, title, url, landing_page, fiscal_year,
                                method_group, month, file_name, sha256, retrieved_at, license, row_count)
@@ -90,7 +100,7 @@ def upsert_source(conn, sf: SourceFile, sha256: str, row_count: int) -> int:
            ON CONFLICT(url) DO UPDATE SET sha256=excluded.sha256,
                retrieved_at=excluded.retrieved_at, row_count=excluded.row_count""",
         (
-            ORGANIZATION, sf.title, sf.url, LANDING_PAGE, sf.fiscal_year,
+            sf.organization, sf.title, sf.url, sf.landing_page, sf.fiscal_year,
             sf.method_group, sf.month, sf.file_name, sha256,
             datetime.datetime.now(datetime.timezone.utc).isoformat(), LICENSE, row_count,
         ),
@@ -219,6 +229,10 @@ def _resolve_company(conn, raw_company: str | None, raw_cn) -> tuple[int | None,
     name, addr = N.split_company_cell(raw_company)
     if not name:
         return None, False, "company_missing"
+    # 非公表相手方(米軍施設の土地所有者等): セルに情報公開法の条文が入る。
+    # 架空の「企業」を登録せず、相手方なし+フラグで収録する。
+    if "情報公開法" in name:
+        return None, False, "company_withheld"
     cn = N.clean_corporate_number(raw_cn)
     norm = N.normalize_company_name(name)
 
@@ -318,6 +332,9 @@ def normalize_contracts(conn, source_id: int, method_group: str) -> dict:
              "uncategorized": 0, "annotation_rows": 0, "suspected_duplicates": 0}
     dom_ids = {r["name"]: r["id"] for r in conn.execute("SELECT id, name FROM categories WHERE axis='domain'")}
     nat_ids = {r["name"]: r["id"] for r in conn.execute("SELECT id, name FROM categories WHERE axis='nature'")}
+    scope_ids = {r["name"]: r["id"] for r in conn.execute("SELECT id, name FROM categories WHERE axis='scope'")}
+    source_org = conn.execute(
+        "SELECT organization FROM sources WHERE id=?", (source_id,)).fetchone()["organization"]
     raws = conn.execute("SELECT * FROM raw_contracts WHERE source_id=?", (source_id,)).fetchall()
     for raw in raws:
         # 注記行(「※誤記修正」等): 契約実体がない行はcontractsに投入しない(rawには残る)
@@ -330,10 +347,11 @@ def normalize_contracts(conn, source_id: int, method_group: str) -> dict:
         flags = []
         d = N.parse_date(raw["raw_contract_date"])
         if d is None:
-            flags.append("date_failed")
+            flags.append("date_missing" if N.is_blank_value(raw["raw_contract_date"]) else "date_failed")
         amount = N.parse_amount(raw["raw_amount"])
         if amount is None:
-            flags.append("amount_failed")
+            # 「－」等は公表元が金額を非公表とした行(賃貸借の相手方非公表等)。parse失敗と区別する
+            flags.append("amount_missing" if N.is_blank_value(raw["raw_amount"]) else "amount_failed")
         planned = N.parse_amount(raw["raw_planned_price"])
         rate = N.parse_rate(raw["raw_award_rate"])
 
@@ -345,6 +363,7 @@ def normalize_contracts(conn, source_id: int, method_group: str) -> dict:
 
         title = (raw["raw_title"] or "").strip()
         dom_name, dom_matched, nat_name, nat_matched = classify(title)
+        scope_name, scope_matched = classify_scope(title, dom_name, dom_matched, nat_name)
         unmatched_reason = None
         if not dom_matched:
             stats["uncategorized"] += 1
@@ -373,10 +392,11 @@ def normalize_contracts(conn, source_id: int, method_group: str) -> dict:
             """INSERT INTO contracts(raw_contract_id, source_id, fiscal_year, contract_date, company_id,
                    title, amount, planned_price, award_rate, procurement_method, agency,
                    agency_department, agency_location, domain_category_id, nature_category_id,
-                   domain_rule_matched, domain_unmatched_reason, nature_rule_matched,
+                   scope_category_id, domain_rule_matched, domain_unmatched_reason,
+                   nature_rule_matched, scope_rule_matched,
                    suspected_duplicate, normalization_status, normalization_flags,
                    normalization_version)
-               VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
+               VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
                ON CONFLICT(raw_contract_id) DO UPDATE SET
                    fiscal_year=excluded.fiscal_year, contract_date=excluded.contract_date,
                    company_id=excluded.company_id, title=excluded.title, amount=excluded.amount,
@@ -385,9 +405,11 @@ def normalize_contracts(conn, source_id: int, method_group: str) -> dict:
                    agency_department=excluded.agency_department, agency_location=excluded.agency_location,
                    domain_category_id=excluded.domain_category_id,
                    nature_category_id=excluded.nature_category_id,
+                   scope_category_id=excluded.scope_category_id,
                    domain_rule_matched=excluded.domain_rule_matched,
                    domain_unmatched_reason=excluded.domain_unmatched_reason,
                    nature_rule_matched=excluded.nature_rule_matched,
+                   scope_rule_matched=excluded.scope_rule_matched,
                    suspected_duplicate=excluded.suspected_duplicate,
                    normalization_status=excluded.normalization_status,
                    normalization_flags=excluded.normalization_flags,
@@ -395,10 +417,10 @@ def normalize_contracts(conn, source_id: int, method_group: str) -> dict:
             (
                 raw["id"], source_id, fy,
                 d.isoformat() if d else None, company_id, title, amount, planned,
-                rate, method, agency["organization"] or ORGANIZATION,
+                rate, method, agency["organization"] or source_org,
                 agency["department"], agency["location"],
-                dom_ids[dom_name], nat_ids[nat_name],
-                int(dom_matched), unmatched_reason, int(nat_matched),
+                dom_ids[dom_name], nat_ids[nat_name], scope_ids[scope_name],
+                int(dom_matched), unmatched_reason, int(nat_matched), int(scope_matched),
                 raw["suspected_duplicate"],
                 status, ";".join(flags) if flags else None, N.NORMALIZATION_VERSION,
             ),

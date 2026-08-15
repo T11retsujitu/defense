@@ -3,7 +3,8 @@
 {% block content %}
 <section class="hero">
   <h1>防衛調達データベース <span class="poc">PoC</span></h1>
-  <p>防衛装備庁が公表する中央調達の契約情報を収集・正規化し、企業・年度・分野横断で検索・集計できる産業データベースです。
+  <p>防衛省・自衛隊の分散した調達公表情報を収集・正規化し、企業・年度・分野・調達機関横断で検索・集計できる産業データベースです。
+     現在は防衛装備庁の中央調達(全量)と北関東防衛局の地方調達(物品・役務、試験収録)を収録しています。
      政府公開データに基づきます(ニュース・推測情報は含みません)。</p>
 </section>
 
@@ -104,6 +105,41 @@
     </tbody>
   </table>
   <p class="note">※ ルール分類済みは金額ベース{{ '%.0f' | format(coverage.nature_matched_amount_pct) }}% / 件数ベース{{ '%.0f' | format(coverage.nature_matched_n_pct) }}%にとどまります。「物品取得・その他」は既定値(仮定)です。</p>
+</section>
+</div>
+
+<div class="grid2">
+<section>
+  <h2>市場区分別 <span class="sub">全収録期間</span></h2>
+  <table class="data">
+    <thead><tr><th>市場区分</th><th class="num">件数</th><th class="num">契約総額</th></tr></thead>
+    <tbody>
+    {% for c in scopes %}
+      <tr>
+        <td><a href="/categories/{{ c.slug }}/">{{ c.name }}</a></td>
+        <td class="num">{{ c.n }}</td>
+        <td class="num">{{ c.total | oku }}</td>
+      </tr>
+    {% endfor %}
+    </tbody>
+  </table>
+  <p class="note">※ 装備品と基地向けの一般契約(食料・清掃等)を区別する軸です。地方調達の収録拡大に備えた区分(<a href="/methodology/">方法論</a>)。</p>
+</section>
+<section>
+  <h2>調達機関別 <span class="sub">全収録期間</span></h2>
+  <table class="data">
+    <thead><tr><th>調達機関</th><th class="num">件数</th><th class="num">契約総額</th></tr></thead>
+    <tbody>
+    {% for o in orgs %}
+      <tr>
+        <td>{% if not static_build %}<a href="/contracts/?org={{ o.organization | urlencode }}">{{ o.organization }}</a>{% else %}{{ o.organization }}{% endif %}</td>
+        <td class="num">{{ o.n }}</td>
+        <td class="num">{{ o.total | oku }}</td>
+      </tr>
+    {% endfor %}
+    </tbody>
+  </table>
+  <p class="note">※ 中央調達(防衛装備庁)は全量収録。地方調達は北関東防衛局(物品・役務)のみの試験収録で、防衛省の地方調達全体ではありません。</p>
 </section>
 </div>
 {% endblock %}

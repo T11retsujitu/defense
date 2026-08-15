@@ -5,24 +5,37 @@
 
 <section>
   <h2>データ取得方法</h2>
-  <p>防衛装備庁が「契約に係る情報の公表（中央調達分）」として公表するExcelファイル(月次・契約方式別)を取得しています。
-     取得は低頻度(リクエスト間隔3秒以上)で行い、取得済みファイルはローカルに保存します。
+  <p>「公共調達の適正化について」(平成18年財計第2017号)に基づき各調達機関が公表する契約情報ファイルを取得しています。
+     現在の取得元は次の2系統です。</p>
+  <ul>
+    <li><strong>防衛装備庁 中央調達</strong> —「契約に係る情報の公表(中央調達分)」(xlsx、月次・契約方式別)</li>
+    <li><strong>北関東防衛局 地方調達</strong> —「入札結果等」の物品・役務(PDF、月次・契約方式別)。
+        様式は中央調達と同じ財計第2017号様式で、法人番号を含みます</li>
+  </ul>
+  <p>取得は低頻度(リクエスト間隔3秒以上)で行い、取得済みファイルはローカルに保存します。
      未公表月(404)は確認日時付きで記録し、進行中年度は数日で、過去年度は約90日で再確認します。
      取得済みファイルも約30日間隔でETag/Last-Modifiedによる条件付き再取得を行い、公表元の訂正・差し替えを検知します。
      差し替えで消えた行はデータベースからも削除します(ゴースト行を残しません)。
      ファイルはSHA-256で同一性を管理し、全レコードが取得元ファイルまで追跡できます。</p>
+  <p>掲載元のHTMLページはbot対策により機械取得できないため、ファイルURLは命名規則から構成し、
+     規則から外れるファイル名は国立国会図書館WARP(インターネット資料収集保存事業)の
+     アーカイブHTMLから抽出しています。ファイル本体は必ず公表元(mod.go.jp)から直接取得します。</p>
 </section>
 
 <section>
   <h2>対象となる調達範囲</h2>
-  <p>現在の収録対象は<strong>防衛装備庁の中央調達</strong>(装備品等の本庁一括調達)のみです。以下は含まれません。</p>
+  <p>現在の収録対象は<strong>防衛装備庁の中央調達(全量)</strong>と、
+     <strong>北関東防衛局の地方調達(物品・役務のみ、地方調達収録の技術検証として)</strong>です。以下は含まれません。</p>
   <ul>
-    <li>各自衛隊・地方防衛局等による地方調達</li>
-    <li>公表基準未満の契約(令和6年度以前は「基準以上」のみが公表対象)</li>
+    <li>北関東防衛局以外の機関(各自衛隊・他の地方防衛局等)による地方調達</li>
+    <li>建設工事・測量等の工事系契約(北関東防衛局は物品・役務のみ収録)</li>
+    <li>公表基準未満の契約(令和6年度以前は「基準以上」のみが公表対象)・少額随意契約</li>
     <li>秘密保全等の理由で非公表の契約</li>
     <li>防衛省本省(内部部局・各機関)・防衛装備庁本部の一般調達</li>
   </ul>
-  <p>したがって、本サイトの集計は日本の防衛調達全体ではなく、公表された中央調達分の部分集合です。</p>
+  <p>したがって、本サイトの集計は日本の防衛調達全体ではありません。
+     参考: 防衛省の調達改善計画(令和7年度)によれば、令和5年度の防衛省の公表対象調達は約8.4兆円で、
+     うち中央調達(本サイトで全量収録)が約5.6兆円(金額の約67%)、地方調達(部分収録)が約2.8兆円です。</p>
 </section>
 
 <section>
@@ -46,17 +59,22 @@
 </section>
 
 <section>
-  <h2>カテゴリ分類(二軸)</h2>
+  <h2>カテゴリ分類(三軸)</h2>
   <p><strong>分類カバレッジ(先に結論)</strong>:
      装備分野はルール分類済みが金額ベース{{ '%.1f' | format(coverage.domain_matched_amount_pct) }}%
      (件数ベース{{ '%.1f' | format(coverage.domain_matched_n_pct) }}%)で、大型契約はほぼ分類できています。
      一方、契約目的はルール分類済みが金額ベース{{ '%.1f' | format(coverage.nature_matched_amount_pct) }}%
      (件数ベース{{ '%.1f' | format(coverage.nature_matched_n_pct) }}%)にとどまり、
      残りは既定値「物品取得・その他」です。<strong>契約目的軸は現時点では部分的な分類です。</strong></p>
-  <p>「何を調達したか」と「何のための契約か」は独立した情報であるため、次の二軸で別々に分類します。</p>
+  <p>「何を調達したか」「何のための契約か」「どの市場の契約か」は独立した情報であるため、次の三軸で別々に分類します。</p>
   <ul>
     <li><strong>装備分野(domain)</strong>: 航空機 / 艦船 / 陸上装備 / 誘導弾・ミサイル / 弾薬・火器 / 無人機 / 宇宙 / C4ISR・電子機器 / IT・ソフトウェア / 共通・その他 / 未分類</li>
     <li><strong>契約目的(nature)</strong>: 物品取得・その他(既定値) / 研究開発 / 改修・能力向上 / 調査・検討 / 維持整備・修理 / 役務・サービス / 燃料・消耗品 / 産業基盤</li>
+    <li><strong>市場区分(scope)</strong>: 任務装備 / 任務支援 / 基地インフラ / 基地運営 / 一般物品・事務 / 糧食・食料 / 未分類。
+        地方調達には基地・庁舎向けの一般的な契約(食料品・清掃・警備等)が多く含まれ、
+        装備品の契約と単純合算すると「防衛産業」の像が歪むため、両者を区別する軸です。
+        キーワード一致(scope_rule_matched=1)を優先し、一致しない契約は装備分野・契約目的軸から導出します
+        (装備分野が判明している契約は任務系とみなす。scope_rule_matched=0で記録)。</li>
   </ul>
   <p>例: 「極超音速誘導弾等の生産準備役務」は 装備分野=誘導弾・ミサイル、契約目的=役務・サービス。
      「軽油2号(艦船用)」は 装備分野=艦船、契約目的=燃料・消耗品。</p>
@@ -126,11 +144,15 @@
       <tr><td>収録契約(全体)</td><td class="num">{{ "{:,}".format(quality.total) }}</td><td class="num">100%</td></tr>
       <tr><td>正規化OK</td><td class="num">{{ "{:,}".format(quality.ok) }}</td><td class="num">{{ '%.1f' | format(quality.ok / quality.total * 100) }}%</td></tr>
       <tr><td>金額parse失敗</td><td class="num">{{ quality.amount_failed }}</td><td class="num">{{ '%.2f' | format(quality.amount_failed / quality.total * 100) }}%</td></tr>
+      <tr><td>金額非公表・記載なし(公表元判断)</td><td class="num">{{ quality.amount_missing }}</td><td class="num">{{ '%.2f' | format(quality.amount_missing / quality.total * 100) }}%</td></tr>
       <tr><td>日付parse失敗</td><td class="num">{{ quality.date_failed }}</td><td class="num">{{ '%.2f' | format(quality.date_failed / quality.total * 100) }}%</td></tr>
       <tr><td>法人未解決</td><td class="num">{{ quality.company_unresolved }}</td><td class="num">{{ '%.2f' | format(quality.company_unresolved / quality.total * 100) }}%</td></tr>
       <tr><td>法人同名複数(曖昧)</td><td class="num">{{ quality.company_ambiguous }}</td><td class="num">{{ '%.2f' | format(quality.company_ambiguous / quality.total * 100) }}%</td></tr>
+      <tr><td>相手方非公表(公表元判断)</td><td class="num">{{ quality.company_withheld }}</td><td class="num">{{ '%.2f' | format(quality.company_withheld / quality.total * 100) }}%</td></tr>
       <tr><td>装備分野 未分類</td><td class="num">{{ "{:,}".format(quality.domain_unmatched) }}</td><td class="num">{{ '%.1f' | format(quality.domain_unmatched / quality.total * 100) }}% (金額ベース{{ '%.1f' | format(100 - coverage.domain_matched_amount_pct) }}%)</td></tr>
       <tr><td>契約目的 既定値適用</td><td class="num">{{ "{:,}".format(quality.nature_defaulted) }}</td><td class="num">{{ '%.1f' | format(quality.nature_defaulted / quality.total * 100) }}% (金額ベース{{ '%.1f' | format(100 - coverage.nature_matched_amount_pct) }}%)</td></tr>
+      <tr><td>市場区分 キーワード一致</td><td class="num">{{ "{:,}".format(quality.scope_keyword) }}</td><td class="num">{{ '%.1f' | format(quality.scope_keyword / quality.total * 100) }}% (残りは導出・未分類)</td></tr>
+      <tr><td>市場区分 未分類</td><td class="num">{{ "{:,}".format(quality.scope_unclassified) }}</td><td class="num">{{ '%.1f' | format(quality.scope_unclassified / quality.total * 100) }}%</td></tr>
       <tr><td>重複疑い</td><td class="num">{{ quality.suspected_duplicates }}</td><td class="num">{{ '%.2f' | format(quality.suspected_duplicates / quality.total * 100) }}% ({{ dup_amount | oku }})</td></tr>
     </tbody>
   </table>
@@ -147,7 +169,7 @@
   <ul>
     <li>金額・日付の型変換(和暦→西暦を含む)</li>
     <li>法人名の表記正規化と法人番号による集約、契約相手方区分の付与</li>
-    <li>装備分野・契約目的の二軸機械分類</li>
+    <li>装備分野・契約目的・市場区分の三軸機械分類</li>
     <li>契約方式のファイル区分(競争入札/随意契約)からの補完</li>
     <li>年度の契約締結日からの導出</li>
     <li>契約担当官欄からの部局・所在地の抽出(氏名は保存しません)</li>

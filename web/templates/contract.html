@@ -15,7 +15,9 @@
 <table class="data kv">
   <tr><th>契約日</th><td>{{ c.contract_date or '不明' }} ({{ c.fiscal_year | fy }})</td></tr>
   <tr><th>契約相手方</th><td>
-    {% if c.company_slug %}<a href="/companies/{{ c.company_slug }}/">{{ c.company }}</a>{% else %}{{ c.company or '未解決' }}{% endif %}
+    {% if c.company_slug %}<a href="/companies/{{ c.company_slug }}/">{{ c.company }}</a>
+    {% elif c.normalization_flags and 'company_withheld' in c.normalization_flags %}非公表(公表元が情報公開法に基づき非公表。原文参照)
+    {% else %}{{ c.company or '未解決' }}{% endif %}
     {% if c.entity_type and c.entity_type != 'company' %}<span class="tag">{{ entity_label(c.entity_type) }}</span>{% endif %}
     {% if c.corporate_number %}<span class="muted small">(法人番号: {{ c.corporate_number }})</span>{% endif %}
   </td></tr>
@@ -31,6 +33,8 @@
       <span class="muted small">({% if c.domain_rule_matched %}ルール一致{% else %}未分類{% if c.domain_unmatched_reason %}: {{ c.domain_unmatched_reason }}{% endif %}{% endif %})</span></td></tr>
   <tr><th>契約目的</th><td>{% if c.nature_slug %}<a href="/categories/{{ c.nature_slug }}/">{{ c.nature_name }}</a>{% endif %}
       <span class="muted small">({% if c.nature_rule_matched %}ルール一致{% else %}既定値適用(分類結果ではない){% endif %})</span></td></tr>
+  <tr><th>市場区分</th><td>{% if c.scope_slug %}<a href="/categories/{{ c.scope_slug }}/">{{ c.scope_name }}</a>{% endif %}
+      <span class="muted small">({% if c.scope_rule_matched %}キーワード一致{% else %}装備分野・契約目的からの導出{% endif %})</span></td></tr>
   <tr><th>正規化状態</th><td>{{ c.normalization_status }}{% if c.normalization_flags %} <span class="warn small">{{ c.normalization_flags }}</span>{% endif %}
       <span class="muted small">(v{{ c.normalization_version }})</span></td></tr>
 </table>

@@ -68,8 +68,9 @@ CREATE TABLE IF NOT EXISTS company_aliases (
     UNIQUE (alias, company_id)
 );
 
--- カテゴリ(二軸)
+-- カテゴリ(三軸)
 -- axis='domain': 装備分野(何を調達したか) / axis='nature': 契約目的(何のための契約か)
+-- axis='scope' : 市場区分(任務装備/任務支援/基地インフラ/基地運営/一般物品・事務/糧食・食料)
 CREATE TABLE IF NOT EXISTS categories (
     id INTEGER PRIMARY KEY,
     axis TEXT NOT NULL,                    -- domain / nature
@@ -97,9 +98,11 @@ CREATE TABLE IF NOT EXISTS contracts (
     agency_location TEXT,                  -- 所在地
     domain_category_id INTEGER REFERENCES categories(id),   -- 装備分野
     nature_category_id INTEGER REFERENCES categories(id),   -- 契約目的
+    scope_category_id INTEGER REFERENCES categories(id),    -- 市場区分
     domain_rule_matched INTEGER NOT NULL DEFAULT 0,  -- 1=ルール一致 / 0=未分類
     domain_unmatched_reason TEXT,          -- 未分類の理由(insufficient_context/cross_domain/manual_review_pending)
     nature_rule_matched INTEGER NOT NULL DEFAULT 0,  -- 1=ルール一致 / 0=既定値(物品取得・その他)適用
+    scope_rule_matched INTEGER NOT NULL DEFAULT 0,   -- 1=キーワード一致 / 0=domain/nature軸から導出or未分類
     suspected_duplicate INTEGER NOT NULL DEFAULT 0,  -- raw層の完全一致重複フラグを引き継ぐ
     normalization_status TEXT NOT NULL,    -- ok / partial
     normalization_flags TEXT,              -- amount_failed;date_failed;company_unresolved;company_ambiguous 等
@@ -129,6 +132,7 @@ CREATE INDEX IF NOT EXISTS idx_contracts_fy ON contracts(fiscal_year);
 CREATE INDEX IF NOT EXISTS idx_contracts_company ON contracts(company_id);
 CREATE INDEX IF NOT EXISTS idx_contracts_domain ON contracts(domain_category_id);
 CREATE INDEX IF NOT EXISTS idx_contracts_nature ON contracts(nature_category_id);
+CREATE INDEX IF NOT EXISTS idx_contracts_scope ON contracts(scope_category_id);
 CREATE INDEX IF NOT EXISTS idx_contracts_date ON contracts(contract_date);
 CREATE INDEX IF NOT EXISTS idx_contracts_amount ON contracts(amount);
 CREATE INDEX IF NOT EXISTS idx_raw_source ON raw_contracts(source_id);

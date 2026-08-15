@@ -151,3 +151,44 @@ def test_empty_title():
     d, dm, n, nm = classify("")
     assert d == DOMAIN_UNCLASSIFIED and not dm
     assert n == NATURE_DEFAULT and not nm
+
+
+# ---- scope軸(市場区分) ----
+
+def test_scope_keyword_food():
+    from etl.categories import classify_scope
+    scope, matched = classify_scope("冷凍食パンの調達", "未分類", False, NATURE_DEFAULT)
+    assert scope == "糧食・食料" and matched
+
+
+def test_scope_keyword_base_operation():
+    from etl.categories import classify_scope
+    scope, matched = classify_scope("敷地内の草刈作業", "未分類", False, "役務・サービス")
+    assert scope == "基地運営" and matched
+
+
+def test_scope_derived_equipment():
+    # 装備分野が判明し目的が取得系 → 任務装備(導出、rule_matched=0)
+    from etl.categories import classify_scope
+    scope, matched = classify_scope("１０式戦車用エンジン", "陸上装備", True, NATURE_DEFAULT)
+    assert scope == "任務装備" and not matched
+
+
+def test_scope_derived_support():
+    # 装備分野が判明し目的が整備 → 任務支援(導出)
+    from etl.categories import classify_scope
+    scope, matched = classify_scope("護衛艦の定期修理", "艦船", True, "維持整備・修理")
+    assert scope == "任務支援" and not matched
+
+
+def test_scope_unclassified():
+    from etl.categories import SCOPE_UNCLASSIFIED, classify_scope
+    scope, matched = classify_scope("マットレス（市販品）", DOMAIN_UNCLASSIFIED, False, NATURE_DEFAULT)
+    assert scope == SCOPE_UNCLASSIFIED and not matched
+
+
+def test_scope_keyword_beats_derivation():
+    # 宿舎管理はdomainが判明していてもキーワード一致(基地運営)を優先
+    from etl.categories import classify_scope
+    scope, matched = classify_scope("宿舎の警備業務", "共通・その他", True, "役務・サービス")
+    assert scope == "基地運営" and matched

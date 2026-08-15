@@ -1,0 +1,18 @@
+{% extends "base.html" %}
+{% block title %}カテゴリ一覧{% endblock %}
+{% block content %}
+<h1>カテゴリ一覧</h1>
+<p class="note">分類は件名キーワードによる機械分類です(<a href="/methodology/">方法論</a>)。分類できない契約は「未分類」として保持しています。</p>
+<table class="data">
+  <thead><tr><th>カテゴリ</th><th class="num">契約件数</th><th class="num">契約総額</th></tr></thead>
+  <tbody>
+  {% for r in rows %}
+    <tr>
+      <td><a href="/categories/{{ r.slug }}/">{{ r.name }}</a></td>
+      <td class="num">{{ r.n }}</td>
+      <td class="num">{{ r.total | oku }}</td>
+    </tr>
+  {% endfor %}
+  </tbody>
+</table>
+{% endblock %}

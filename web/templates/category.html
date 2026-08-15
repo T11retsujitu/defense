@@ -1,0 +1,78 @@
+{% extends "base.html" %}
+{% block title %}{{ cat.name }}{% endblock %}
+{% block content %}
+<nav class="breadcrumb"><a href="/categories/">カテゴリ</a> › {{ cat.name }}</nav>
+<h1>{{ cat.name }}</h1>
+{% if cat.slug == 'uncategorized' %}
+<div class="callout">ルールで分類できなかった契約です。誤分類を避けるため推測で割り当てず、未分類のまま公開しています。</div>
+{% endif %}
+
+<section class="stat-row">
+  <div class="stat"><div class="stat-label">{{ fy | wareki }} 契約総額</div>
+    <div class="stat-value">{{ (cur.total if cur else none) | oku }}</div></div>
+  <div class="stat"><div class="stat-label">{{ fy | wareki }} 契約件数</div>
+    <div class="stat-value">{{ cur.n if cur else '—' }}</div></div>
+  <div class="stat"><div class="stat-label">前年度比</div>
+    <div class="stat-value">{% if yoy is not none %}{{ '%+.1f' | format(yoy) }}%{% else %}—{% endif %}</div></div>
+</section>
+
+<div class="grid2">
+<section>
+  <h2>年度別契約額</h2>
+  <table class="data barchart">
+    <thead><tr><th>年度</th><th class="num">契約総額</th><th class="bar-col"></th><th class="num">件数</th></tr></thead>
+    <tbody>
+    {% for r in yearly %}
+      <tr>
+        <td>{{ r.fiscal_year | wareki }}</td>
+        <td class="num">{{ r.total | oku }}</td>
+        <td class="bar-col"><div class="bar" style="width: {{ (r.total / max_total * 100) | round(1) }}%"></div></td>
+        <td class="num">{{ r.n }}</td>
+      </tr>
+    {% endfor %}
+    </tbody>
+  </table>
+  <p class="note">※ 収録済みファイル分のみ。<a href="/sources/">収録状況</a>を参照。</p>
+
+  <h2>主要契約企業</h2>
+  <table class="data">
+    <thead><tr><th>企業</th><th class="num">契約総額</th><th class="num">件数</th></tr></thead>
+    <tbody>
+    {% for r in top_companies %}
+      <tr><td><a href="/companies/{{ r.slug }}/">{{ r.name }}</a></td>
+          <td class="num">{{ r.total | oku }}</td><td class="num">{{ r.n }}</td></tr>
+    {% endfor %}
+    </tbody>
+  </table>
+</section>
+
+<section>
+  <h2>大型契約</h2>
+  <table class="data">
+    <thead><tr><th>契約日</th><th>件名</th><th class="num">金額</th></tr></thead>
+    <tbody>
+    {% for r in largest %}
+      <tr><td class="nowrap muted">{{ r.contract_date or '—' }}</td>
+          <td><a href="/contracts/{{ r.id }}/">{{ r.title | truncate(40) }}</a>
+              {% if r.company %}<span class="muted small"> / {{ r.company | truncate(18) }}</span>{% endif %}</td>
+          <td class="num">{{ r.amount | oku }}</td></tr>
+    {% endfor %}
+    </tbody>
+  </table>
+
+  <h2>最近の契約</h2>
+  <table class="data">
+    <thead><tr><th>契約日</th><th>件名</th><th class="num">金額</th></tr></thead>
+    <tbody>
+    {% for r in recent %}
+      <tr><td class="nowrap muted">{{ r.contract_date or '—' }}</td>
+          <td><a href="/contracts/{{ r.id }}/">{{ r.title | truncate(40) }}</a>
+              {% if r.company %}<span class="muted small"> / {{ r.company | truncate(18) }}</span>{% endif %}</td>
+          <td class="num">{{ r.amount | oku }}</td></tr>
+    {% endfor %}
+    </tbody>
+  </table>
+  <p class="more"><a href="/contracts/?category={{ cat.slug }}">このカテゴリの全契約 →</a></p>
+</section>
+</div>
+{% endblock %}

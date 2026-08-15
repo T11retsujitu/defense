@@ -1,0 +1,43 @@
+{% extends "base.html" %}
+{% block title %}{{ c.title | truncate(40) }}{% endblock %}
+{% block content %}
+<nav class="breadcrumb"><a href="/contracts/">契約検索</a> › 契約詳細</nav>
+<h1 class="contract-title">{{ c.title }}</h1>
+
+<table class="data kv">
+  <tr><th>契約日</th><td>{{ c.contract_date or '不明' }} ({{ c.fiscal_year | fy }})</td></tr>
+  <tr><th>契約相手方</th><td>
+    {% if c.company_slug %}<a href="/companies/{{ c.company_slug }}/">{{ c.company }}</a>{% else %}{{ c.company or '未解決' }}{% endif %}
+    {% if c.corporate_number %}<span class="muted small">(法人番号: {{ c.corporate_number }})</span>{% endif %}
+  </td></tr>
+  <tr><th>契約金額</th><td>{{ c.amount | yen }} {% if c.amount %}({{ c.amount | oku }}){% endif %}</td></tr>
+  <tr><th>予定価格</th><td>{{ c.planned_price | yen }}</td></tr>
+  <tr><th>落札率</th><td>{% if c.award_rate %}{{ '%.1f' | format(c.award_rate * 100) }}%{% else %}—{% endif %}</td></tr>
+  <tr><th>契約方式</th><td>{{ c.procurement_method }}</td></tr>
+  <tr><th>調達機関</th><td>{{ c.agency }}{% if c.agency_detail %} <span class="muted small">({{ c.agency_detail }})</span>{% endif %}</td></tr>
+  <tr><th>カテゴリ</th><td>{% if c.category_slug %}<a href="/categories/{{ c.category_slug }}/">{{ c.category }}</a>{% endif %}
+      <span class="muted small">(機械分類 / 確信度 {{ c.classification_confidence }})</span></td></tr>
+  <tr><th>正規化状態</th><td>{{ c.normalization_status }}{% if c.normalization_flags %} <span class="warn small">{{ c.normalization_flags }}</span>{% endif %}
+      <span class="muted small">(v{{ c.normalization_version }})</span></td></tr>
+</table>
+
+<section>
+  <h2>出典</h2>
+  <table class="data kv">
+    <tr><th>公表資料</th><td>{{ c.source_title }}</td></tr>
+    <tr><th>元ファイル</th><td><a href="{{ c.source_url }}" rel="noopener">{{ c.source_url }}</a></td></tr>
+    <tr><th>掲載ページ</th><td><a href="{{ c.landing_page }}" rel="noopener">{{ c.landing_page }}</a></td></tr>
+    <tr><th>利用条件</th><td class="small">{{ c.license }}</td></tr>
+  </table>
+</section>
+
+<section>
+  <h2>原データ (公表ファイルの記載)</h2>
+  <table class="data kv">
+    <tr><th>契約相手方(原文)</th><td class="pre">{{ c.raw_company }}</td></tr>
+    <tr><th>契約金額(原文)</th><td class="pre">{{ c.raw_amount }}</td></tr>
+    <tr><th>契約締結日(原文)</th><td class="pre">{{ c.raw_contract_date }}</td></tr>
+  </table>
+  <p class="note">正規化前の原文はデータベースに全列保持しています。</p>
+</section>
+{% endblock %}

@@ -1,0 +1,36 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>{% block title %}防衛調達データベース{% endblock %} | 防衛調達データベース (PoC)</title>
+<link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+<header class="site-header">
+  <div class="wrap">
+    <a class="brand" href="/">防衛調達データベース <span class="poc">PoC</span></a>
+    <nav>
+      <a href="/contracts/">契約検索</a>
+      <a href="/companies/">企業</a>
+      <a href="/categories/">カテゴリ</a>
+      <a href="/rankings/companies/">ランキング</a>
+      <a href="/sources/">データソース</a>
+      <a href="/methodology/">方法論</a>
+    </nav>
+  </div>
+</header>
+<main class="wrap">
+{% block content %}{% endblock %}
+</main>
+<footer class="site-footer">
+  <div class="wrap">
+    <p>出典: 防衛装備庁「契約に係る情報の公表（中央調達分）」を加工して作成
+      (<a href="https://www.mod.go.jp/atla/souhon/supply/jisseki/rakusatu/index.html" rel="noopener">掲載元</a> /
+       <a href="https://www.mod.go.jp/j/info/contents.html" rel="noopener">利用規約 PDL1.0</a>)</p>
+    <p class="disclaimer">本サイトの契約金額は公表された個別契約の金額であり、各社の防衛関連売上高ではありません。
+       正規化・分類は本サイト独自の加工であり、誤りを含む可能性があります。詳細は<a href="/methodology/">方法論</a>を参照。</p>
+  </div>
+</footer>
+</body>
+</html>

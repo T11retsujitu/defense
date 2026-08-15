@@ -1,0 +1,56 @@
+{% extends "base.html" %}
+{% block title %}契約検索{% endblock %}
+{% block content %}
+<h1>契約検索</h1>
+
+<form class="filters" method="get" action="/contracts/">
+  <input type="search" name="q" value="{{ f.q }}" placeholder="件名キーワード">
+  <select name="year">
+    <option value="">全年度</option>
+    {% for y in years %}<option value="{{ y }}" {% if f.year == y %}selected{% endif %}>{{ y | wareki }}</option>{% endfor %}
+  </select>
+  <select name="category">
+    <option value="">全カテゴリ</option>
+    {% for c in cats %}<option value="{{ c.slug }}" {% if f.category == c.slug %}selected{% endif %}>{{ c.name }}</option>{% endfor %}
+  </select>
+  <select name="method">
+    <option value="">全契約方式</option>
+    {% for m in methods %}<option value="{{ m }}" {% if f.method == m %}selected{% endif %}>{{ m }}</option>{% endfor %}
+  </select>
+  <input type="number" name="amount_min" value="{{ f.amount_min if f.amount_min is not none }}" placeholder="金額下限(億円)" step="0.1" min="0">
+  <input type="number" name="amount_max" value="{{ f.amount_max if f.amount_max is not none }}" placeholder="金額上限(億円)" step="0.1" min="0">
+  {% if f.company %}<input type="hidden" name="company" value="{{ f.company }}">{% endif %}
+  <button type="submit">検索</button>
+</form>
+
+<p class="result-count">{{ "{:,}".format(total) }}件</p>
+
+<div class="table-scroll">
+<table class="data">
+  <thead><tr>
+    <th>契約日</th><th>企業</th><th>件名</th><th>カテゴリ</th><th>契約方式</th><th class="num">金額</th>
+  </tr></thead>
+  <tbody>
+  {% for r in rows %}
+    <tr>
+      <td class="nowrap muted">{{ r.contract_date or '—' }}</td>
+      <td>{% if r.company_slug %}<a href="/companies/{{ r.company_slug }}/">{{ r.company | truncate(20) }}</a>{% else %}—{% endif %}</td>
+      <td><a href="/contracts/{{ r.id }}/">{{ r.title | truncate(50) }}</a></td>
+      <td>{% if r.category_slug %}<a href="/categories/{{ r.category_slug }}/">{{ r.category }}</a>{% endif %}</td>
+      <td class="nowrap">{{ r.procurement_method }}</td>
+      <td class="num">{{ r.amount | oku }}</td>
+    </tr>
+  {% endfor %}
+  </tbody>
+</table>
+</div>
+
+{% if pages > 1 %}
+<nav class="pager">
+  {% set args = request.args.to_dict() %}
+  {% if page > 1 %}{% set _ = args.update({'page': page - 1}) %}<a href="/contracts/?{{ args | urlencode }}">← 前</a>{% endif %}
+  <span>{{ page }} / {{ pages }}</span>
+  {% if page < pages %}{% set _ = args.update({'page': page + 1}) %}<a href="/contracts/?{{ args | urlencode }}">次 →</a>{% endif %}
+</nav>
+{% endif %}
+{% endblock %}

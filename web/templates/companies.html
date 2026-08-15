@@ -1,0 +1,30 @@
+{% extends "base.html" %}
+{% block title %}企業一覧{% endblock %}
+{% block content %}
+<h1>企業一覧 <span class="sub">{{ fy | fy }} 契約額順</span></h1>
+
+<form class="filters" method="get">
+  <select name="year" onchange="this.form.submit()">
+    {% for y in years %}<option value="{{ y }}" {% if fy == y %}selected{% endif %}>{{ y | wareki }}</option>{% endfor %}
+  </select>
+  <noscript><button type="submit">表示</button></noscript>
+</form>
+
+<div class="table-scroll">
+<table class="data">
+  <thead><tr><th>#</th><th>企業・団体</th><th>法人番号</th><th class="num">契約総額</th><th class="num">件数</th></tr></thead>
+  <tbody>
+  {% for r in rows %}
+    <tr>
+      <td class="muted">{{ loop.index }}</td>
+      <td><a href="/companies/{{ r.slug }}/">{{ r.name }}</a>
+        {% if r.entity_type == 'foreign_government' %}<span class="tag">FMS</span>{% endif %}</td>
+      <td class="muted small">{{ r.corporate_number or '—' }}</td>
+      <td class="num">{{ r.total | oku }}</td>
+      <td class="num">{{ r.n }}</td>
+    </tr>
+  {% endfor %}
+  </tbody>
+</table>
+</div>
+{% endblock %}

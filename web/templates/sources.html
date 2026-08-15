@@ -1,0 +1,71 @@
+{% extends "base.html" %}
+{% block title %}データソース{% endblock %}
+{% block content %}
+<h1>データソース</h1>
+
+<section>
+  <h2>データ提供元</h2>
+  <table class="data kv">
+    <tr><th>提供元</th><td>防衛装備庁 (中央調達分)</td></tr>
+    <tr><th>元ページ</th><td><a href="https://www.mod.go.jp/atla/souhon/supply/jisseki/rakusatu/index.html" rel="noopener">契約に係る情報の公表（中央調達分）</a></td></tr>
+    <tr><th>根拠制度</th><td>「公共調達の適正化について」(平成18年8月25日付 財計第2017号)に基づく契約情報の公表</td></tr>
+    <tr><th>利用条件</th><td><a href="https://www.mod.go.jp/j/info/contents.html" rel="noopener">防衛省・自衛隊ウェブサイト等のコンテンツの利用について</a> — 公共データ利用規約(第1.0版)(PDL1.0)。CC BY 4.0互換。出典記載が必要。</td></tr>
+    <tr><th>出典表示</th><td>出典: 防衛装備庁「契約に係る情報の公表（中央調達分）」を加工して作成</td></tr>
+  </table>
+</section>
+
+<section>
+  <h2>年度別収録状況</h2>
+  <table class="data">
+    <thead><tr><th>年度</th><th class="num">取得ファイル数</th><th class="num">取得契約行数</th></tr></thead>
+    <tbody>
+    {% for r in agg %}
+      <tr><td>{{ r.fiscal_year | fy }}</td><td class="num">{{ r.files }}</td><td class="num">{{ "{:,}".format(r.rows_) }}</td></tr>
+    {% endfor %}
+    </tbody>
+  </table>
+  <p class="note">PoCのため各年度の一部の月のみを収録しています。年度合計は公表全体の合計ではありません。</p>
+</section>
+
+<section>
+  <h2>取得ファイル一覧</h2>
+  <div class="table-scroll">
+  <table class="data">
+    <thead><tr><th>公表資料</th><th class="num">契約行数</th><th>取得日時</th><th>元ファイル</th></tr></thead>
+    <tbody>
+    {% for s in rows %}
+      <tr>
+        <td>{{ s.title }}</td>
+        <td class="num">{{ s.n_rows }}</td>
+        <td class="nowrap muted">{{ s.retrieved_at[:19] }}</td>
+        <td class="small"><a href="{{ s.url }}" rel="noopener">{{ s.file_name }}</a></td>
+      </tr>
+    {% endfor %}
+    </tbody>
+  </table>
+  </div>
+</section>
+
+<section>
+  <h2>取込ジョブログ</h2>
+  <div class="table-scroll">
+  <table class="data">
+    <thead><tr><th>実行日時</th><th class="num">取得</th><th class="num">キャッシュ</th><th class="num">失敗</th>
+      <th class="num">raw行</th><th class="num">追加</th><th class="num">更新</th>
+      <th class="num">parse失敗</th><th class="num">企業未解決</th><th class="num">未分類</th></tr></thead>
+    <tbody>
+    {% for j in jobs %}
+      <tr>
+        <td class="nowrap muted">{{ j.started_at[:19] }}</td>
+        <td class="num">{{ j.files_fetched }}</td><td class="num">{{ j.files_cached }}</td>
+        <td class="num {% if j.files_failed %}warn{% endif %}">{{ j.files_failed }}</td>
+        <td class="num">{{ j.rows_raw }}</td><td class="num">{{ j.rows_inserted }}</td><td class="num">{{ j.rows_updated }}</td>
+        <td class="num {% if j.parse_failures %}warn{% endif %}">{{ j.parse_failures }}</td>
+        <td class="num">{{ j.companies_unresolved }}</td><td class="num">{{ j.uncategorized }}</td>
+      </tr>
+    {% endfor %}
+    </tbody>
+  </table>
+  </div>
+</section>
+{% endblock %}

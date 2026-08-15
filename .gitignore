@@ -1,0 +1,5 @@
+# 生成物 (make db で data/raw から再生成可能)
+data/db/
+__pycache__/
+*.pyc
+.pytest_cache/

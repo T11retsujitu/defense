@@ -1,0 +1,102 @@
+/* 防衛調達データベース PoC — 金融・統計データサイト風のニュートラルなスタイル
+   単一アクセント色(鋼青)+グレー。装飾より密度・可読性・速度を優先。 */
+:root {
+  --ink: #1a2333;
+  --ink-2: #4a5568;
+  --muted: #8b93a3;
+  --line: #e3e6ec;
+  --bg: #ffffff;
+  --bg-2: #f6f7f9;
+  --accent: #33608f;       /* 鋼青: リンク・バー */
+  --accent-bg: #33608f;
+  --warn: #b4530a;
+}
+
+* { box-sizing: border-box; }
+body {
+  margin: 0;
+  font-family: "Hiragino Kaku Gothic ProN", "Noto Sans JP", "Yu Gothic UI", Meiryo, sans-serif;
+  color: var(--ink);
+  background: var(--bg);
+  font-size: 14px;
+  line-height: 1.65;
+}
+.wrap { max-width: 1080px; margin: 0 auto; padding: 0 16px; }
+
+a { color: var(--accent); text-decoration: none; }
+a:hover { text-decoration: underline; }
+
+/* header */
+.site-header { border-bottom: 1px solid var(--line); background: var(--bg); }
+.site-header .wrap { display: flex; align-items: center; gap: 24px; flex-wrap: wrap; padding-top: 10px; padding-bottom: 10px; }
+.brand { font-weight: 700; font-size: 16px; color: var(--ink); }
+.brand:hover { text-decoration: none; }
+.poc { font-size: 11px; font-weight: 600; color: var(--accent); border: 1px solid var(--accent); border-radius: 3px; padding: 0 4px; vertical-align: 2px; }
+.site-header nav { display: flex; gap: 16px; flex-wrap: wrap; }
+.site-header nav a { color: var(--ink-2); }
+
+main { padding: 24px 16px 48px; }
+
+h1 { font-size: 22px; margin: 12px 0 8px; }
+h2 { font-size: 15px; margin: 28px 0 8px; border-left: 3px solid var(--accent); padding-left: 8px; }
+h2 .sub, h1 .sub { font-weight: 400; color: var(--muted); font-size: 13px; }
+.small-h { border: none; padding: 0; color: var(--ink-2); }
+
+.hero p { color: var(--ink-2); max-width: 46em; }
+.breadcrumb { color: var(--muted); font-size: 12px; margin-top: 8px; }
+.meta { color: var(--ink-2); font-size: 13px; }
+.contract-title { line-height: 1.4; max-width: 40em; }
+
+/* stat tiles */
+.stat-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; margin: 16px 0; }
+.stat { border: 1px solid var(--line); border-radius: 6px; padding: 10px 12px; background: var(--bg); }
+.stat-label { font-size: 12px; color: var(--muted); }
+.stat-value { font-size: 20px; font-weight: 700; font-variant-numeric: tabular-nums; }
+.stat-value.small { font-size: 14px; }
+
+/* layout */
+.grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 28px; }
+@media (max-width: 800px) { .grid2 { grid-template-columns: 1fr; } }
+
+/* tables */
+.table-scroll { overflow-x: auto; }
+table.data { border-collapse: collapse; width: 100%; font-size: 13px; }
+table.data th, table.data td { padding: 6px 8px; border-bottom: 1px solid var(--line); text-align: left; vertical-align: top; }
+table.data thead th { color: var(--muted); font-weight: 600; font-size: 12px; border-bottom: 2px solid var(--line); white-space: nowrap; }
+table.data td.num, table.data th.num { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
+table.data tr:hover td { background: var(--bg-2); }
+table.kv th { width: 11em; color: var(--muted); font-weight: 600; }
+.nowrap { white-space: nowrap; }
+.muted { color: var(--muted); }
+.small { font-size: 12px; }
+.warn { color: var(--warn); }
+.pre { white-space: pre-wrap; }
+.tag { font-size: 10px; color: var(--ink-2); border: 1px solid var(--line); background: var(--bg-2); border-radius: 3px; padding: 0 4px; margin-left: 4px; vertical-align: 1px; }
+
+/* bar chart in table (表がそのままテーブルビューを兼ねる) */
+.barchart .bar-col { width: 30%; min-width: 120px; }
+.bar { height: 14px; min-width: 2px; background: var(--accent-bg); border-radius: 0 4px 4px 0; }
+
+/* filters */
+.filters { display: flex; gap: 8px; flex-wrap: wrap; margin: 14px 0; }
+.filters input, .filters select, .filters button {
+  font: inherit; font-size: 13px; padding: 6px 8px; border: 1px solid var(--line);
+  border-radius: 4px; background: var(--bg); color: var(--ink);
+}
+.filters input[type="search"] { min-width: 220px; }
+.filters button { background: var(--accent); color: #fff; border-color: var(--accent); cursor: pointer; }
+
+.result-count { color: var(--ink-2); font-size: 13px; }
+.pager { display: flex; gap: 16px; align-items: center; margin: 16px 0; font-size: 13px; }
+.more { font-size: 13px; }
+.note { color: var(--muted); font-size: 12px; }
+
+.callout {
+  border: 1px solid #e8d9b8; background: #fdf8ec; border-radius: 6px;
+  padding: 10px 14px; font-size: 13px; color: #5f4a1e; margin: 12px 0; max-width: 56em;
+}
+
+/* footer */
+.site-footer { border-top: 1px solid var(--line); background: var(--bg-2); margin-top: 32px; }
+.site-footer .wrap { padding: 16px; font-size: 12px; color: var(--ink-2); }
+.disclaimer { color: var(--muted); }

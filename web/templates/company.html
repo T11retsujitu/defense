@@ -1,0 +1,92 @@
+{% extends "base.html" %}
+{% block title %}{{ co.name }}{% endblock %}
+{% block content %}
+<nav class="breadcrumb"><a href="/companies/">企業</a> › {{ co.name }}</nav>
+<h1>{{ co.name }}</h1>
+<p class="meta">
+  {% if co.corporate_number %}法人番号: {{ co.corporate_number }} ・ {% endif %}
+  {% if co.entity_type == 'foreign_government' %}区分: 外国政府等(FMS=対外有償軍事援助){% elif co.entity_type == 'gov_agency' %}区分: 公的機関{% endif %}
+</p>
+
+<div class="callout">
+  ここに表示する金額は防衛装備庁 中央調達の公表契約の合計であり、
+  <strong>当該企業の防衛関連売上高ではありません</strong>。
+  地方調達・非公表契約・変更契約は含まれません。複数年度契約は契約締結年度に全額計上されます。
+</div>
+
+<section class="stat-row">
+  <div class="stat"><div class="stat-label">{{ fy | wareki }} 契約総額</div>
+    <div class="stat-value">{{ (cur.total if cur else none) | oku }}</div></div>
+  <div class="stat"><div class="stat-label">{{ fy | wareki }} 契約件数</div>
+    <div class="stat-value">{{ cur.n if cur else '—' }}</div></div>
+  <div class="stat"><div class="stat-label">前年度比 <span class="small">(収録範囲内)</span></div>
+    <div class="stat-value">{% if yoy is not none %}{{ '%+.1f' | format(yoy) }}%{% else %}—{% endif %}</div></div>
+  <div class="stat"><div class="stat-label">{{ fy | wareki }} 契約額順位</div>
+    <div class="stat-value">{% if rank %}{{ rank }}位{% else %}—{% endif %}</div></div>
+</section>
+
+<div class="grid2">
+<section>
+  <h2>年度別契約額</h2>
+  <table class="data barchart">
+    <thead><tr><th>年度</th><th class="num">契約総額</th><th class="bar-col"></th><th class="num">件数</th></tr></thead>
+    <tbody>
+    {% for r in yearly %}
+      <tr>
+        <td>{{ r.fiscal_year | wareki }}</td>
+        <td class="num">{{ r.total | oku }}</td>
+        <td class="bar-col"><div class="bar" style="width: {{ (r.total / max_total * 100) | round(1) }}%"></div></td>
+        <td class="num">{{ r.n }}</td>
+      </tr>
+    {% endfor %}
+    </tbody>
+  </table>
+  <p class="note">※ 収録済みファイル分のみ。<a href="/sources/">収録状況</a>を参照。</p>
+
+  <h2>カテゴリ構成</h2>
+  <table class="data">
+    <thead><tr><th>カテゴリ</th><th class="num">契約総額</th><th class="num">件数</th></tr></thead>
+    <tbody>
+    {% for r in cats %}
+      <tr><td><a href="/categories/{{ r.slug }}/">{{ r.name }}</a></td>
+          <td class="num">{{ r.total | oku }}</td><td class="num">{{ r.n }}</td></tr>
+    {% endfor %}
+    </tbody>
+  </table>
+</section>
+
+<section>
+  <h2>大型契約</h2>
+  <table class="data">
+    <thead><tr><th>契約日</th><th>件名</th><th class="num">金額</th></tr></thead>
+    <tbody>
+    {% for r in largest %}
+      <tr><td class="nowrap muted">{{ r.contract_date or '—' }}</td>
+          <td><a href="/contracts/{{ r.id }}/">{{ r.title | truncate(45) }}</a></td>
+          <td class="num">{{ r.amount | oku }}</td></tr>
+    {% endfor %}
+    </tbody>
+  </table>
+
+  <h2>最近の契約</h2>
+  <table class="data">
+    <thead><tr><th>契約日</th><th>件名</th><th class="num">金額</th></tr></thead>
+    <tbody>
+    {% for r in recent %}
+      <tr><td class="nowrap muted">{{ r.contract_date or '—' }}</td>
+          <td><a href="/contracts/{{ r.id }}/">{{ r.title | truncate(45) }}</a></td>
+          <td class="num">{{ r.amount | oku }}</td></tr>
+    {% endfor %}
+    </tbody>
+  </table>
+  <p class="more"><a href="/contracts/?company={{ co.slug }}">この企業の全契約 →</a></p>
+</section>
+</div>
+
+{% if aliases %}
+<section>
+  <h2 class="small-h">収録された表記</h2>
+  <p class="muted small">{% for a in aliases %}{{ a.alias }}{% if not loop.last %} / {% endif %}{% endfor %}</p>
+</section>
+{% endif %}
+{% endblock %}

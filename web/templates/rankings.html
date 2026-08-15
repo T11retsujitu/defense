@@ -1,0 +1,31 @@
+{% extends "base.html" %}
+{% block title %}企業ランキング{% endblock %}
+{% block content %}
+<h1>企業契約額ランキング <span class="sub">{{ fy | fy }}</span></h1>
+
+<form class="filters" method="get">
+  <select name="year" onchange="this.form.submit()">
+    {% for y in years %}<option value="{{ y }}" {% if fy == y %}selected{% endif %}>{{ y | wareki }}</option>{% endfor %}
+  </select>
+  <noscript><button type="submit">表示</button></noscript>
+</form>
+
+<div class="table-scroll">
+<table class="data">
+  <thead><tr><th>順位</th><th>企業・団体</th><th class="num">契約総額</th><th class="num">件数</th><th class="num">前年比</th></tr></thead>
+  <tbody>
+  {% for r in rows %}
+    {% set prev = prev_totals.get(r.slug) %}
+    <tr>
+      <td class="muted">{{ loop.index }}</td>
+      <td><a href="/companies/{{ r.slug }}/">{{ r.name }}</a></td>
+      <td class="num">{{ r.total | oku }}</td>
+      <td class="num">{{ r.n }}</td>
+      <td class="num">{% if prev %}{{ '%+.1f' | format((r.total - prev) / prev * 100) }}%{% else %}—{% endif %}</td>
+    </tr>
+  {% endfor %}
+  </tbody>
+</table>
+</div>
+<p class="note">※ 収録済みファイル分のみの集計。前年比は前年度の収録範囲との比較であり、月数が揃わない場合は参考値です。</p>
+{% endblock %}

@@ -1,0 +1,93 @@
+{% extends "base.html" %}
+{% block title %}方法論{% endblock %}
+{% block content %}
+<h1>方法論</h1>
+
+<section>
+  <h2>データ取得方法</h2>
+  <p>防衛装備庁が「契約に係る情報の公表（中央調達分）」として公表するExcelファイル(月次・契約方式別)を取得しています。
+     取得は低頻度(リクエスト間隔3秒以上)で行い、取得済みファイルはローカルに保存して再取得しません。
+     ファイルはSHA-256で同一性を管理し、全レコードが取得元ファイルまで追跡できます。</p>
+</section>
+
+<section>
+  <h2>対象となる調達範囲</h2>
+  <p>現在の収録対象は<strong>防衛装備庁の中央調達</strong>(装備品等の本庁一括調達)のみです。以下は含まれません。</p>
+  <ul>
+    <li>各自衛隊・地方防衛局等による地方調達</li>
+    <li>公表基準未満の契約(令和6年度以前は「基準以上」のみが公表対象)</li>
+    <li>秘密保全等の理由で非公表の契約</li>
+    <li>防衛省本省(内部部局・各機関)の一般調達</li>
+  </ul>
+  <p>したがって、本サイトの集計は日本の防衛調達全体ではなく、公表された中央調達分の部分集合です。</p>
+</section>
+
+<section>
+  <h2>法人名の正規化</h2>
+  <p>公表ファイルに含まれる<strong>法人番号(13桁)</strong>を第一の同定キーとし、同一法人番号の契約を同一企業に集約します。
+     法人番号のない契約相手方(米軍各省などのFMS=対外有償軍事援助等)は、手動管理の辞書で同定します。
+     表記の正規化(全角/半角、（株）→株式会社等)は照合の補助にのみ使い、文字列類似だけで別法人を統合することはしません。
+     未解決の相手方は「未解決」として集計から区別できます。</p>
+</section>
+
+<section>
+  <h2>カテゴリ分類</h2>
+  <p>契約件名に対するキーワードルール(順序付き・決定的)で分類しています。LLM等の非決定的な分類は使用していません。
+     ルールに一致しない契約は<strong>未分類</strong>のまま保持し、推測で割り当てません。
+     各契約の分類確信度(ルール一致=1.0 / 未分類=0.0)を記録しています。</p>
+</section>
+
+<section>
+  <h2>契約額の扱い</h2>
+  <ul>
+    <li>金額は公表ファイルの「契約金額」欄の値(円)です。</li>
+    <li><strong>契約金額は企業の防衛関連売上高ではありません。</strong>納期・検収・収益認識の時期は契約締結日と一致しません。</li>
+    <li>複数年度にわたる契約(国庫債務負担行為)も契約締結年度に全額を計上しています。</li>
+    <li>変更契約・契約解除による増減は現時点で追跡していません(公表ファイルに含まれる場合は別契約として現れることがあります)。</li>
+    <li>単価契約等で金額の解釈が異なる場合があります。備考欄の注記は原データとして保持しています。</li>
+  </ul>
+</section>
+
+<section>
+  <h2>欠損・失敗データの扱い</h2>
+  <p>金額・日付のparse失敗、法人未解決、カテゴリ未分類は<strong>破棄せず</strong>、
+     各レコードの normalization_status / normalization_flags に記録し、下表とデータソースページの取込ログで公開しています。</p>
+  {% if quality %}
+  <table class="data">
+    <thead><tr><th>指標</th><th class="num">件数</th><th class="num">割合</th></tr></thead>
+    <tbody>
+      <tr><td>収録契約(全体)</td><td class="num">{{ quality.total }}</td><td class="num">100%</td></tr>
+      <tr><td>正規化OK</td><td class="num">{{ quality.ok }}</td><td class="num">{{ '%.1f' | format(quality.ok / quality.total * 100) }}%</td></tr>
+      <tr><td>金額parse失敗</td><td class="num">{{ quality.amount_failed }}</td><td class="num">{{ '%.2f' | format(quality.amount_failed / quality.total * 100) }}%</td></tr>
+      <tr><td>日付parse失敗</td><td class="num">{{ quality.date_failed }}</td><td class="num">{{ '%.2f' | format(quality.date_failed / quality.total * 100) }}%</td></tr>
+      <tr><td>法人未解決</td><td class="num">{{ quality.company_unresolved }}</td><td class="num">{{ '%.2f' | format(quality.company_unresolved / quality.total * 100) }}%</td></tr>
+      <tr><td>カテゴリ未分類</td><td class="num">{{ quality.uncategorized }}</td><td class="num">{{ '%.1f' | format(quality.uncategorized / quality.total * 100) }}%</td></tr>
+    </tbody>
+  </table>
+  {% endif %}
+</section>
+
+<section>
+  <h2>データ更新頻度</h2>
+  <p>公表元は月次で更新されます。本PoCでは手動実行の取込コマンドで更新します(自動定期実行は未実装)。</p>
+</section>
+
+<section>
+  <h2>当サイトによる加工箇所</h2>
+  <ul>
+    <li>金額・日付の型変換(和暦→西暦を含む)</li>
+    <li>法人名の表記正規化と法人番号による集約</li>
+    <li>カテゴリの機械分類</li>
+    <li>契約方式のファイル区分(競争入札/随意契約)からの補完</li>
+    <li>年度の契約締結日からの導出</li>
+  </ul>
+  <p>公表ファイルの原文は加工と分離して全列保持しており、各契約詳細ページで確認できます。</p>
+</section>
+
+<section>
+  <h2>免責事項</h2>
+  <p>本サイトは政府公表資料を機械的に加工した二次情報であり、正確性・完全性を保証しません。
+     投資判断・取引の根拠には公表元の一次資料を必ず確認してください。
+     本サイトは防衛省・防衛装備庁とは無関係であり、掲載内容は公的見解ではありません。</p>
+</section>
+{% endblock %}

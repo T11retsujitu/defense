@@ -19,7 +19,8 @@
     {% if c.entity_type and c.entity_type != 'company' %}<span class="tag">{{ entity_label(c.entity_type) }}</span>{% endif %}
     {% if c.corporate_number %}<span class="muted small">(法人番号: {{ c.corporate_number }})</span>{% endif %}
   </td></tr>
-  <tr><th>契約金額</th><td>{{ c.amount | yen }} {% if c.amount %}({{ c.amount | oku }}){% endif %}</td></tr>
+  <tr><th>契約金額</th><td>{{ c.amount | yen }} {% if c.amount %}({{ c.amount | oku }}){% endif %}
+      <span class="muted small">※締結時の契約総額。履行期間が複数年度に及ぶ場合も締結年度に全額計上(公表データに履行期間の情報はありません)</span></td></tr>
   <tr><th>予定価格</th><td>{{ c.planned_price | yen }}</td></tr>
   <tr><th>落札率</th><td>{% if c.award_rate %}{{ '%.1f' | format(c.award_rate * 100) }}%{% else %}—{% endif %}</td></tr>
   <tr><th>契約方式</th><td>{{ c.procurement_method }}</td></tr>

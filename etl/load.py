@@ -20,7 +20,7 @@ from .categories import (
     domain_unmatched_reason,
 )
 from .companies import (
-    SEED_COMPANIES, US_GOV_RE, guess_entity_type_without_cn,
+    SEED_COMPANIES, US_GOV_RE, derive_slug_base, guess_entity_type_without_cn,
     lookup_foreign_entity, seed_entity_type,
 )
 from .parse import RawRow
@@ -198,6 +198,18 @@ def insert_raw_rows(conn, source_id: int, fiscal_year: int, rows: list[RawRow]) 
     return ins, upd, deleted
 
 
+def _new_company_slug(conn, name: str, cn: str) -> str:
+    """シード外の法人番号付き新規法人のslug。
+
+    名称にラテン文字があればそこから可読slugを作る。日本語のみの名称は
+    読み推定をせず c+法人番号 とする(決定的)。衝突時も法人番号に退避。
+    """
+    base = derive_slug_base(name)
+    if base and not conn.execute("SELECT 1 FROM companies WHERE slug=?", (base,)).fetchone():
+        return base
+    return f"c{cn}"
+
+
 def _resolve_company(conn, raw_company: str | None, raw_cn) -> tuple[int | None, bool, str | None]:
     """企業解決。返り値: (company_id, resolved_high_confidence, flag)
 
@@ -221,7 +233,7 @@ def _resolve_company(conn, raw_company: str | None, raw_cn) -> tuple[int | None,
         conn.execute(
             """INSERT INTO companies(corporate_number, name, normalized_name, slug, entity_type)
                VALUES (?,?,?,?,?)""",
-            (cn, name, norm, f"c{cn}", seed_entity_type(name)),
+            (cn, name, norm, _new_company_slug(conn, name, cn), seed_entity_type(name)),
         )
         cid = conn.execute("SELECT id FROM companies WHERE corporate_number=?", (cn,)).fetchone()["id"]
         conn.execute(

@@ -14,6 +14,9 @@
 {% else %}
 <p class="note">外国政府等(FMS=対外有償軍事援助)・公的機関を含む全ての契約相手方の集計です。</p>
 {% endif %}
+<p class="note">契約金額は<strong>契約締結年度に全額計上</strong>しています(履行期間が複数年度に及ぶ事業契約を含む)。
+年度の売上・支払額ではありません。総額の過半が単一の契約による相手方には
+<span class="tag">単一契約集中</span>の印を付けています。</p>
 
 {% if static_build %}
 <p class="filters-static">年度:
@@ -37,7 +40,8 @@
     <tr>
       <td class="muted">{{ loop.index }}</td>
       <td><a href="/companies/{{ r.slug }}/">{{ r.name }}</a>
-        {% if scope == 'companies' and r.entity_type == 'foreign_company' %}<span class="tag">外国企業</span>{% endif %}</td>
+        {% if scope == 'companies' and r.entity_type == 'foreign_company' %}<span class="tag">外国企業</span>{% endif %}
+        {% if r.total and r.max_amount / r.total >= 0.5 %}<span class="tag" title="最大1件の契約が総額の{{ '%.0f' | format(r.max_amount / r.total * 100) }}%を占めます。複数年度事業の一括契約である可能性があります">単一契約{{ '%.0f' | format(r.max_amount / r.total * 100) }}%</span>{% endif %}</td>
       {% if scope != 'companies' %}<td class="small">{{ entity_label(r.entity_type) }}</td>{% endif %}
       <td class="num">{{ r.total | oku }}</td>
       <td class="num">{{ r.n }}</td>

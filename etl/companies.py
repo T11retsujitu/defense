@@ -45,6 +45,7 @@ SEED_COMPANIES: dict[str, tuple[str, str]] = {
     "1180301018771": ("トヨタ自動車株式会社", "toyota-motor"),
     "2010001098064": ("株式会社国際電気", "kokusai-electric"),
     "9012405001241": ("国立研究開発法人宇宙航空研究開発機構", "jaxa"),
+    "6011101114814": ("株式会社トライサット・コンステレーション", "trisat-constellation"),
 }
 
 # 法人番号を持たない契約相手方(FMS=対外有償軍事援助の米軍各省 等)
@@ -106,3 +107,24 @@ def lookup_foreign_entity(raw_name: str):
     """法人番号なしの外国政府等をシードから解決。"""
     key = normalize_company_name(raw_name)
     return FOREIGN_ENTITIES.get(key)
+
+
+import unicodedata as _ud
+
+_ASCII_TOKEN_RE = _re.compile(r"[A-Za-z0-9]+")
+_SLUG_STOPWORDS = {"co", "ltd", "inc", "corp", "corporation", "company", "kk", "llc", "gk"}
+
+
+def derive_slug_base(name: str) -> str | None:
+    """名称からURL用slugの候補を導出する(決定的)。
+
+    NFKC正規化後のラテン文字・数字トークンをハイフン連結する。
+    日本語のみの名称はローマ字化しない(非決定的な読み推定を避ける)ため
+    Noneを返し、呼び出し側が法人番号等のフォールバックを使う。
+    """
+    if not name:
+        return None
+    tokens = [t.lower() for t in _ASCII_TOKEN_RE.findall(_ud.normalize("NFKC", name))]
+    tokens = [t for t in tokens if t not in _SLUG_STOPWORDS]
+    base = "-".join(tokens)
+    return base if len(base) >= 3 else None

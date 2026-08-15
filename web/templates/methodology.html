@@ -47,6 +47,12 @@
 
 <section>
   <h2>カテゴリ分類(二軸)</h2>
+  <p><strong>分類カバレッジ(先に結論)</strong>:
+     装備分野はルール分類済みが金額ベース{{ '%.1f' | format(coverage.domain_matched_amount_pct) }}%
+     (件数ベース{{ '%.1f' | format(coverage.domain_matched_n_pct) }}%)で、大型契約はほぼ分類できています。
+     一方、契約目的はルール分類済みが金額ベース{{ '%.1f' | format(coverage.nature_matched_amount_pct) }}%
+     (件数ベース{{ '%.1f' | format(coverage.nature_matched_n_pct) }}%)にとどまり、
+     残りは既定値「物品取得・その他」です。<strong>契約目的軸は現時点では部分的な分類です。</strong></p>
   <p>「何を調達したか」と「何のための契約か」は独立した情報であるため、次の二軸で別々に分類します。</p>
   <ul>
     <li><strong>装備分野(domain)</strong>: 航空機 / 艦船 / 陸上装備 / 誘導弾・ミサイル / 弾薬・火器 / 無人機 / 宇宙 / C4ISR・電子機器 / IT・ソフトウェア / 共通・その他 / 未分類</li>
@@ -83,7 +89,11 @@
   <ul>
     <li>金額は公表ファイルの「契約金額」欄の値(円)です。</li>
     <li><strong>契約金額は企業の防衛関連売上高ではありません。</strong>納期・検収・収益認識の時期は契約締結日と一致しません。</li>
-    <li>複数年度にわたる契約(国庫債務負担行為)も契約締結年度に全額を計上しています。</li>
+    <li><strong>複数年度にわたる契約(国庫債務負担行為・長期契約・事業契約)も契約締結年度に全額を計上しています。</strong>
+        このため、複数年度事業を単年で一括契約した相手方が、その年度のランキング上位に現れることがあります
+        (例: 履行期間5年超の衛星コンステレーション整備・運営等事業 約2,831億円)。</li>
+    <li>公表ファイルには履行期間(納期)の列がないため、複数年契約の機械判定や年割換算はできません。
+        代替として、ランキングでは総額の過半が単一契約による相手方に「単一契約集中」の印を表示しています。</li>
     <li>変更契約・契約解除による増減は現時点で追跡していません。</li>
     <li>年度は契約締結日から導出しています(4月開始の日本の会計年度)。</li>
   </ul>
@@ -119,8 +129,8 @@
       <tr><td>日付parse失敗</td><td class="num">{{ quality.date_failed }}</td><td class="num">{{ '%.2f' | format(quality.date_failed / quality.total * 100) }}%</td></tr>
       <tr><td>法人未解決</td><td class="num">{{ quality.company_unresolved }}</td><td class="num">{{ '%.2f' | format(quality.company_unresolved / quality.total * 100) }}%</td></tr>
       <tr><td>法人同名複数(曖昧)</td><td class="num">{{ quality.company_ambiguous }}</td><td class="num">{{ '%.2f' | format(quality.company_ambiguous / quality.total * 100) }}%</td></tr>
-      <tr><td>装備分野 未分類</td><td class="num">{{ "{:,}".format(quality.domain_unmatched) }}</td><td class="num">{{ '%.1f' | format(quality.domain_unmatched / quality.total * 100) }}%</td></tr>
-      <tr><td>契約目的 既定値適用</td><td class="num">{{ "{:,}".format(quality.nature_defaulted) }}</td><td class="num">{{ '%.1f' | format(quality.nature_defaulted / quality.total * 100) }}%</td></tr>
+      <tr><td>装備分野 未分類</td><td class="num">{{ "{:,}".format(quality.domain_unmatched) }}</td><td class="num">{{ '%.1f' | format(quality.domain_unmatched / quality.total * 100) }}% (金額ベース{{ '%.1f' | format(100 - coverage.domain_matched_amount_pct) }}%)</td></tr>
+      <tr><td>契約目的 既定値適用</td><td class="num">{{ "{:,}".format(quality.nature_defaulted) }}</td><td class="num">{{ '%.1f' | format(quality.nature_defaulted / quality.total * 100) }}% (金額ベース{{ '%.1f' | format(100 - coverage.nature_matched_amount_pct) }}%)</td></tr>
       <tr><td>重複疑い</td><td class="num">{{ quality.suspected_duplicates }}</td><td class="num">{{ '%.2f' | format(quality.suspected_duplicates / quality.total * 100) }}% ({{ dup_amount | oku }})</td></tr>
     </tbody>
   </table>

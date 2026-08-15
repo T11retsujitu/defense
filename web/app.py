@@ -160,6 +160,33 @@ def yoy_same_period(conn, fy: int, where_sql: str, params: list) -> tuple:
     return cur, prev["t"], yoy, label
 
 
+def classification_coverage(conn) -> dict:
+    """二軸分類のカバレッジ。件数ベースと金額ベースの両方を返す。
+
+    件数と金額で像が大きく異なる(小口契約ほど未分類が多い)ため、
+    どちらか一方だけを見せると誤解を招く。両方を常に併記する。
+    """
+    r = conn.execute(
+        """SELECT COUNT(*) total, SUM(COALESCE(amount,0)) total_amount,
+             SUM(CASE WHEN domain_rule_matched=0 THEN 1 ELSE 0 END) dom_n,
+             SUM(CASE WHEN domain_rule_matched=0 THEN COALESCE(amount,0) ELSE 0 END) dom_a,
+             SUM(CASE WHEN nature_rule_matched=0 THEN 1 ELSE 0 END) nat_n,
+             SUM(CASE WHEN nature_rule_matched=0 THEN COALESCE(amount,0) ELSE 0 END) nat_a
+           FROM contracts""").fetchone()
+
+    def pct(part, whole):
+        return part / whole * 100 if whole else 0.0
+
+    return {
+        "domain_matched_n_pct": pct(r["total"] - r["dom_n"], r["total"]),
+        "domain_matched_amount_pct": pct(r["total_amount"] - r["dom_a"], r["total_amount"]),
+        "domain_unmatched_amount": r["dom_a"],
+        "nature_matched_n_pct": pct(r["total"] - r["nat_n"], r["total"]),
+        "nature_matched_amount_pct": pct(r["total_amount"] - r["nat_a"], r["total_amount"]),
+        "nature_defaulted_amount": r["nat_a"],
+    }
+
+
 # ---- ページ ----
 
 @app.route("/")
@@ -174,7 +201,8 @@ def index():
     fy = default_fy()
     mmap = fy_months_map()
     ranking = conn.execute(
-        f"""SELECT co.name, co.slug, SUM(c.amount) total, COUNT(*) n
+        f"""SELECT co.name, co.slug, SUM(c.amount) total, COUNT(*) n,
+                  MAX(c.amount) max_amount
            FROM contracts c JOIN companies co ON co.id = c.company_id
            WHERE c.fiscal_year = ? AND c.amount IS NOT NULL
              AND co.entity_type IN ('company','foreign_company')
@@ -203,7 +231,7 @@ def index():
         "index.html", stats=stats, last_import=last_import, fy=fy,
         ranking=ranking, recent_large=recent_large, domains=domains,
         natures=natures, trend=trend, max_total=max_total,
-        trend_labels=trend_labels)
+        trend_labels=trend_labels, coverage=classification_coverage(conn))
 
 
 @app.route("/contracts/")
@@ -356,7 +384,8 @@ def categories():
         """SELECT cat.name, cat.slug, COUNT(*) n, SUM(c.amount) total
            FROM contracts c JOIN categories cat ON cat.id = c.nature_category_id
            GROUP BY cat.id ORDER BY cat.sort_order""").fetchall()
-    return render_template("categories.html", domains=domains, natures=natures)
+    return render_template("categories.html", domains=domains, natures=natures,
+                           coverage=classification_coverage(conn))
 
 
 @app.route("/categories/<slug>/")
@@ -405,7 +434,8 @@ def _ranking_rows(conn, fy: int, entity_types: tuple | None):
         where += f" AND co.entity_type IN ({','.join('?' * len(entity_types))})"
         params += list(entity_types)
     rows = conn.execute(
-        f"""SELECT co.name, co.slug, co.entity_type, SUM(c.amount) total, COUNT(*) n
+        f"""SELECT co.name, co.slug, co.entity_type, SUM(c.amount) total, COUNT(*) n,
+                  MAX(c.amount) max_amount
            FROM contracts c JOIN companies co ON co.id = c.company_id
            WHERE {where} GROUP BY co.id ORDER BY total DESC LIMIT 100""",
         params).fetchall()
@@ -485,7 +515,8 @@ def methodology():
            WHERE c.amount IS NOT NULL GROUP BY co.entity_type ORDER BY total DESC""").fetchall()
     return render_template("methodology.html", quality=quality,
                            dup_amount=dup_amount, entity_split=entity_split,
-                           unmatched_reasons=unmatched_reasons)
+                           unmatched_reasons=unmatched_reasons,
+                           coverage=classification_coverage(conn))
 
 
 @app.route("/contracts/<int:cid>/")

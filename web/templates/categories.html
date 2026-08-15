@@ -5,6 +5,10 @@
 <p class="note">件名キーワードによる機械分類です(<a href="/methodology/">方法論</a>)。
 「装備分野(何を調達したか)」と「契約目的(何のための契約か)」は独立した軸として分類しています。
 分類できない契約は「未分類」として保持しています。</p>
+<p class="note"><strong>分類カバレッジ</strong>:
+装備分野はルール分類済みが金額ベース{{ '%.0f' | format(coverage.domain_matched_amount_pct) }}%・件数ベース{{ '%.0f' | format(coverage.domain_matched_n_pct) }}%。
+契約目的は金額ベース{{ '%.0f' | format(coverage.nature_matched_amount_pct) }}%・件数ベース{{ '%.0f' | format(coverage.nature_matched_n_pct) }}%にとどまり、
+残りは既定値「物品取得・その他」です。<strong>契約目的軸はまだ発展途上の分類</strong>としてご覧ください。</p>
 
 <div class="grid2">
 <section>
@@ -29,7 +33,8 @@
     <tbody>
     {% for r in natures %}
       <tr>
-        <td><a href="/categories/{{ r.slug }}/">{{ r.name }}</a></td>
+        <td><a href="/categories/{{ r.slug }}/">{{ r.name }}</a>
+          {% if r.slug == 'acquisition' %}<span class="tag" title="どの目的ルールにも一致しない契約の既定値であり、分類結果ではありません">既定値</span>{% endif %}</td>
         <td class="num">{{ r.n }}</td>
         <td class="num">{{ r.total | oku }}</td>
       </tr>

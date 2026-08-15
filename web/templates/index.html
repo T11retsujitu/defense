@@ -24,13 +24,15 @@
     {% for r in ranking %}
       <tr>
         <td class="muted">{{ loop.index }}</td>
-        <td><a href="/companies/{{ r.slug }}/">{{ r.name }}</a></td>
+        <td><a href="/companies/{{ r.slug }}/">{{ r.name }}</a>
+          {% if r.total and r.max_amount / r.total >= 0.5 %}<span class="tag" title="最大1件の契約が総額の{{ '%.0f' | format(r.max_amount / r.total * 100) }}%を占めます。複数年度事業の一括契約である可能性があります">単一契約{{ '%.0f' | format(r.max_amount / r.total * 100) }}%</span>{% endif %}</td>
         <td class="num">{{ r.total | oku }}</td>
         <td class="num">{{ r.n }}</td>
       </tr>
     {% endfor %}
     </tbody>
   </table>
+  <p class="note">※ 契約金額は締結年度に全額計上(複数年度事業を含む)。年度の売上ではありません。</p>
   <p class="more"><a href="/rankings/companies/">ランキング全体 →</a></p>
 </section>
 
@@ -84,6 +86,7 @@
     {% endfor %}
     </tbody>
   </table>
+  <p class="note">※ ルール分類済み: 金額ベース{{ '%.0f' | format(coverage.domain_matched_amount_pct) }}% / 件数ベース{{ '%.0f' | format(coverage.domain_matched_n_pct) }}%(<a href="/methodology/">方法論</a>)。</p>
 </section>
 <section>
   <h2>契約目的別 <span class="sub">全収録期間</span></h2>
@@ -92,13 +95,15 @@
     <tbody>
     {% for c in natures %}
       <tr>
-        <td><a href="/categories/{{ c.slug }}/">{{ c.name }}</a></td>
+        <td><a href="/categories/{{ c.slug }}/">{{ c.name }}</a>
+          {% if c.slug == 'acquisition' %}<span class="tag" title="どの目的ルールにも一致しない契約の既定値であり、分類結果ではありません">既定値</span>{% endif %}</td>
         <td class="num">{{ c.n }}</td>
         <td class="num">{{ c.total | oku }}</td>
       </tr>
     {% endfor %}
     </tbody>
   </table>
+  <p class="note">※ ルール分類済みは金額ベース{{ '%.0f' | format(coverage.nature_matched_amount_pct) }}% / 件数ベース{{ '%.0f' | format(coverage.nature_matched_n_pct) }}%にとどまります。「物品取得・その他」は既定値(仮定)です。</p>
 </section>
 </div>
 {% endblock %}
